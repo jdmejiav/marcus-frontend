@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState, useEffect } from "react"
 import IconButton from "@mui/material/IconButton";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
@@ -24,11 +23,14 @@ import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import moment from "moment";
 import Button from "@mui/material/Button";
+import Fab from '@mui/material/Fab';
+import AddIcon from '@mui/icons-material/Add'
+import AxiosInstance from "../Components/AxiosInstance";
+import axios from "axios";
 
 
 
-
-const client = new W3CWebSocket('ws://127.0.0.1.:8000')
+const client = new W3CWebSocket('ws://20.7.2.215:8000')
 
 
 export default function PlaneacionPage() {
@@ -61,9 +63,6 @@ export default function PlaneacionPage() {
     useEffect(() => {
         console.log(items != undefined)
         getItems()
-        getCustomers()
-
-
     }, [])
 
 
@@ -94,6 +93,8 @@ export default function PlaneacionPage() {
                     setRows(copy)
                 }
             } else if (dataFromServer["type"] == 'delete') {
+                console.log("se hace update de")
+                console.log(dataFromServer["data"])
                 setRows(dataFromServer["data"])
             }
         }
@@ -276,7 +277,18 @@ export default function PlaneacionPage() {
 
                                     const handleOnPONumberChange = (e) => {
                                         let copy = [...rows]
-                                        copy[params.row.id - 1].poDescription[key] = e.target.value
+
+
+                                        const boxesTemp = key.split(" ");
+
+                                        let maxBoxes = + Number.parseInt(boxesTemp[1].substring(0, boxesTemp[1].length - 1))
+
+
+                                        console.log(maxBoxes)
+
+                                        if ((Number.parseInt(e.target.value) <= Number.parseInt(maxBoxes) && Number.parseInt(e.target.value) >= 0) || e.target.value == '') {
+                                            copy[params.row.id - 1].poDescription[key] = (e.target.value == '' ? 0 : Number.parseInt(e.target.value))
+                                        }
                                         setRows(copy)
                                         updateDry(params.row.id - 1)
                                     }
@@ -335,6 +347,7 @@ export default function PlaneacionPage() {
         { width: 110, field: "wet_pack", headerName: "Wet Pack", editable: true },
         { width: 110, field: "wo", headerName: "W.O.", editable: true },
         { width: 110, field: "line", headerName: "Line", editable: true, type: "singleSelect", valueOptions: ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5", "Vases 1", "Vases 2"] },
+        { width: 110, field: "turno", headerName: "Turno", editable: true, type: "singleSelect", valueOptions: ["Mañana", "Tarde"] },
         { width: 110, field: "priority", headerName: "Priority", sortable: true, editable: true, type: "singleSelect", valueOptions: ["No Priorizada", "Prioridad 1", "Prioridad 2", "Prioridad 3"] },
         { width: 110, field: "assigned", headerName: "Assigned To", editable: true },
         { width: 110, field: "made", headerName: "Made By", editable: true },
@@ -346,17 +359,63 @@ export default function PlaneacionPage() {
     ]
 
     const getItems = async () => {
-        await axios.get("http://localhost:8080/Inventory/GetProductInventoryHistory/getProducts", { headers: { "Access-Control-Allow-Origin": "*" } }).then((res) => {
-            setItems(res.data)
 
+        const myHeaders = new Headers();
+        myHeaders.append("Cache-Control", "no-cache");
+        myHeaders.append("Ocp-Apim-Subscription-Key", "67a39b7b8bbe4581aed70a1f2562a784");
+        myHeaders.append("Access-Control-Allow-Origin", "*");
 
-        })
-    }
+        const requestOptions = {
+            method: 'GET',
+            headers: myHeaders,
+            redirect: 'follow'
+        };
+        await fetch("/Inventory/GetProductInventoryHistory/BQC/0", requestOptions)
+            .then(async (res) => {
+                const data = await res.json()
 
-    const getCustomers = async () => {
-        await axios.get("http://localhost:8080/Inventory/GetProductInventoryHistory/getCustomers", { headers: { "Access-Control-Allow-Origin": "*" } }).then((res) => {
-            setCustomers(res.data)
-        })
+                const customers = {}
+                const products = {}
+                data.map((val) => {
+                    console.log(products)
+                    if (!(val.customer in customers)) {
+                        customers[val.customer] = "1"
+                    }
+                    if (val.name in products) {
+                        const arrTemp = products[val.name].poDetails;
+                        arrTemp.push({
+                            po: val.poId,
+                            age: val.age,
+                            numBoxes: val.boxes,
+                            boxType: val.boxCode,
+                            customer: val.customer
+                        })
+                        products[val.name] = {
+                            poDetails: arrTemp,
+                            numBoxes: Number.parseInt(products[val.name].numBoxes) + Number.parseInt(val.boxes)
+                        }
+                    } else {
+                        products[val.name] = {
+                            poDetails: Array({
+                                po: val.poId,
+                                age: val.age,
+                                numBoxes: Number.parseInt(val.boxes),
+                                boxType: val.boxCode,
+                                customer: val.customer
+                            }),
+                            name: val.name,
+                            numBoxes: val.boxes
+                        }
+                    }
+
+                })
+
+                setItems(products)
+                setCustomers(Object.keys(customers))
+
+            })
+            .then(result => console.log(result))
+            .catch(error => console.log('error', error));
     }
 
 
@@ -411,6 +470,7 @@ export default function PlaneacionPage() {
                 wet_pack: "",
                 wo: "",
                 line: "",
+                turno: "Mañana",
                 priority: "No Priorizada",
                 assigned: "",
                 made: "",
@@ -534,7 +594,7 @@ export default function PlaneacionPage() {
 
 
     return (
-        <div>
+        <div style={{ overflowY: "hidden" }}>
             {items != undefined ?
                 <>
                     {
@@ -548,7 +608,7 @@ export default function PlaneacionPage() {
                         width: '100%',
                         '& .super-app-theme--header': {
                             backgroundColor: 'rgba(255, 7, 0, 0.55)',
-                        }
+                        },
                     }}>
 
                         <DataGrid
@@ -561,24 +621,16 @@ export default function PlaneacionPage() {
                             rows={rows}
                             columns={columns}
                         ></DataGrid>
+                        <Fab style={{
+                            position: "sticky",
+                            bottom: "10px",
+                            left: "10px"
+                        }} onClick={() => { setDialogAdd(true) }} color="primary" aria-label="add">
+                            <AddIcon />
+                        </Fab>
                     </Box>
-                    <Button onClick={() => console.log(items)}>
-                        Print
-                    </Button>
-                    <div style={{
-                        position: "fixed",
-                        width: "100%",
-                        height: "100%",
-                        display: "flex",
-                        flexWrap: "wrap-reverse",
-                        flexDirection: "row-reverse"
-                    }}>
 
-                    </div>
-                    <Button
-                        onClick={() => { setDialogAdd(true) }}>
-                        add
-                    </Button>
+
                 </>
                 :
                 <div style={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
