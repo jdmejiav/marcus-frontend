@@ -362,7 +362,7 @@ export default function PlaneacionPage() {
 
         const myHeaders = new Headers();
         myHeaders.append("Cache-Control", "no-cache");
-        myHeaders.append("Ocp-Apim-Subscription-Key", "67a39b7b8bbe4581aed70a1f2562a784");
+        myHeaders.append("Ocp-Apim-Subscription-Key", process.env.REACT_APP_API_KEY);
         myHeaders.append("Access-Control-Allow-Origin", "*");
 
         const requestOptions = {
@@ -637,7 +637,6 @@ export default function PlaneacionPage() {
                     <CircularProgress />
                 </div>
             }
-
         </div >
     )
 }
