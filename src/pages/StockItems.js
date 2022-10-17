@@ -1,15 +1,13 @@
 
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { Card, Grid, Typography, List, ListItem, CircularProgress } from "@mui/material";
-import AxiosInstance from "../Components/AxiosInstance";
 export default function StockItems() {
 
 
     const [items, setItems] = useState(undefined)
 
     useEffect(() => {
-        console.log(items != undefined)
+        
         getItems()
 
     }, [])
@@ -31,7 +29,7 @@ export default function StockItems() {
 
                 const customers = {}
                 const products = {}
-                data.map((val) => {
+                data.forEach((val) => {
                     if (!(val.customer in customers)) {
                         customers[val.customer] = "1"
                     }
@@ -77,7 +75,7 @@ export default function StockItems() {
         <>
             {
 
-                items != undefined ?
+                items !== undefined ?
 
                     <Grid container spacing={2}>
                         {
