@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import PlaneacionPage from "./PlaneacionPage";
 import Button from "@mui/material/Button";
 import Paleta from "../util/Pallete";
+
 export default function PlaneacionAlternator({ children }) {
 
     const [selected, setSelected] = useState(1)
@@ -26,7 +27,7 @@ export default function PlaneacionAlternator({ children }) {
                         transform: "skew(-20deg)"
                     }}>
 
-                    SameDay
+                    Same Day
                 </Button>
                 <Button variant="contained" style={{
                     height: selected === 2 ? "85%" : "70%",
@@ -38,7 +39,7 @@ export default function PlaneacionAlternator({ children }) {
                         setSelected(2)
                     }}
                 >
-                    NextDay
+                    Next Day
                 </Button>
             </div>
 

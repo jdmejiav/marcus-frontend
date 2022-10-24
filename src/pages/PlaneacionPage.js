@@ -26,13 +26,13 @@ import Button from "@mui/material/Button";
 import Fab from '@mui/material/Fab';
 import AddIcon from '@mui/icons-material/Add'
 import Paleta from "../util/Pallete";
+import Excel from '../images/excel-icon.svg'
+import { styleDataGrid } from "../Components/DataGridStyles";
 
-const client = new W3CWebSocket('ws://20.7.2.215:8000')
+const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
 export default function PlaneacionPage(props) {
-
     // States Definition
-
     const [customers, setCustomers] = useState([])
 
     const [dialogAdd, setDialogAdd] = useState(false)
@@ -40,6 +40,7 @@ export default function PlaneacionPage(props) {
     const [day, setDay] = useState(props.day)
 
     const [items, setItems] = useState(undefined)
+    //const [imprimir, setImprimir] = useState(false)
 
     const [newCustomer, setNewCustomer] = useState("")
 
@@ -47,6 +48,7 @@ export default function PlaneacionPage(props) {
     const [newProduct, setNewProduct] = useState("")
 
     const [rows, setRows] = useState([])
+    //const [rowsExcel, setRowsExcel] = useState([])
 
     const [tempItem, setTempItem] = useState()
 
@@ -54,10 +56,9 @@ export default function PlaneacionPage(props) {
     useEffect(() => {
         getItems()
     }, [])
-
     useEffect(() => {
         if (client.readyState === 1) {
-            console.log("se manda jeje")
+
             setDay(props.day)
             fetchContent(props.day)
         }
@@ -88,7 +89,7 @@ export default function PlaneacionPage(props) {
                         setRows(copy)
                     }
                 } else if (dataFromServer["type"] === 'delete') {
-                    console.log("se hace update de")
+
                     console.log(dataFromServer["data"])
                     setRows(dataFromServer["data"])
                 }
@@ -142,7 +143,6 @@ export default function PlaneacionPage(props) {
                             <DeleteRoundedIcon style={{ color: "inherit" }} ></DeleteRoundedIcon>
                         </IconButton>
                         <IconButton onClick={(e) => {
-                            console.log(params)
                             setTempItem(params.row.product)
                             setDialogBuscar(true)
                         }}>
@@ -152,14 +152,11 @@ export default function PlaneacionPage(props) {
                 )
             }
         },
-        {
-            width: 100, field: "date", headerName: "Date", type: 'date', sortable: true, editable: true, valueFormatter: params =>
-                moment(params.value).format("DD/MM/YYYY"),
-        },
+        { width: 100, field: "date", headerName: "Date", type: 'date', sortable: true, editable: true, valueFormatter: params => moment(params.value).format("DD/MM/YYYY") },
         { width: 110, field: "customer", headerName: "Customer", sortable: true, editable: true, type: "singleSelect", valueOptions: customers },
         { width: 250, field: "product", headerName: "Product", sortable: true, editable: true, type: "singleSelect", valueOptions: Object.keys(items === undefined ? {} : items) },
         {
-            width: 250, field: "po", sortable: false, headerName: "P.O.", renderCell: (params) => {
+            width: 240, field: "po", sortable: false, headerName: "P.O.", renderCell: (params) => {
                 const [pos, setPos] = useState(rows[params.row.id - 1] === undefined ? [] : rows[params.row.id - 1].po)
                 useEffect(() => {
                     setPos(rows[params.row.id - 1] === undefined ? [] : rows[params.row.id - 1].po)
@@ -197,21 +194,19 @@ export default function PlaneacionPage(props) {
                 };
                 return (
                     <FormControl sx={{ m: 1, width: 300 }}>
-                        <InputLabel id="demo-multiple-chip-label">P.Os</InputLabel>
+                        <InputLabel id="multiple-chip-label">P.Os</InputLabel>
                         <Select
-
                             sx={{
                                 '& .MuiSvgIcon-root': {
                                     color: "inherit"
                                 }
                             }}
-
-                            labelId="demo-multiple-chip-label"
-                            id="demo-multiple-chip"
+                            labelId="multiple-chip-label"
+                            id="multiple-chip"
                             multiple
                             value={pos}
                             onChange={handleChange}
-                            input={<OutlinedInput id="select-multiple-chip" label="Chip" />}
+                            input={<OutlinedInput fullWidth id="select-multiple-chip" label="Chip" />}
                             renderValue={(selected) => (
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                     {selected.map((value) => (
@@ -224,10 +219,10 @@ export default function PlaneacionPage(props) {
                                 (items[params.row.product] === undefined ? <MenuItem value=""></MenuItem> :
                                     items[params.row.product].poDetails.map((name) =>
                                     (<MenuItem
-                                        key={name.po + " " + name.numBoxes + name.boxType}
-                                        value={name.po + " " + name.numBoxes + name.boxType}
+                                        key={name.po + " Age: " + name.age + ", " + name.numBoxes + name.boxType}
+                                        value={name.po + " Age: " + name.age + ", " + name.numBoxes + name.boxType}
                                     >
-                                        <ListItemText key={name.po + " " + name.numBoxes + name.boxType}>{name.po + " " + name.numBoxes + name.boxType}</ListItemText>
+                                        <ListItemText key={name.po + " Age: " + name.age + ", " + name.numBoxes + name.boxType}>{name.po + " Age: " + name.age + ", " + name.numBoxes + name.boxType}</ListItemText>
                                     </MenuItem>)
                                     ))
                             }
@@ -242,13 +237,11 @@ export default function PlaneacionPage(props) {
                     rows[params.row.id - 1] === undefined ? <></> :
                         <List>
                             {
-                                Object.keys(rows[params.row.id - 1].poDescription).map((key) => {
+                                Object.keys(rows[params.row.id - 1].poDescription).map((key, idx) => {
                                     const handleOnPONumberChange = (e) => {
                                         let copy = [...rows]
                                         const boxesTemp = key.split(" ");
-                                        let maxBoxes = + Number.parseInt(boxesTemp[1].substring(0, boxesTemp[1].length - 1))
-                                        console.log(maxBoxes)
-
+                                        let maxBoxes = + Number.parseInt(boxesTemp[boxesTemp.length - 1].substring(0, boxesTemp[boxesTemp.length - 1].length - 1))
                                         if ((Number.parseInt(e.target.value) <= Number.parseInt(maxBoxes) && Number.parseInt(e.target.value) >= 0) || e.target.value === '') {
                                             copy[params.row.id - 1].poDescription[key] = (e.target.value === '' ? 0 : Number.parseInt(e.target.value))
                                         }
@@ -266,23 +259,18 @@ export default function PlaneacionPage(props) {
                                             })
                                         )
                                     }
-                                    return <MenuItem>
+                                    return <MenuItem key={idx}>
                                         <Grid sx={{
                                             alignItems: "center"
                                         }} container spacing={1}>
-                                            <Grid sx={{ p: 0, m: 0 }} item xs={4}>
+                                            <Grid sx={{ p: 0, m: 0 }} item xs={8}>
                                                 <TextField sx={{
                                                     '& .MuiOutlinedInput-input': {
                                                         padding: "10px 0px 10px 5px"
                                                     }, p: 0, m: 0
                                                 }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={rows[params.row.id - 1].poDescription[key]} fullWidth />
                                             </Grid>
-                                            <Grid sx={{ p: 0, m: 0 }} item xs={8}
-                                                alignItems="center"
-                                                justifyContent="center"
-                                            >
-                                                <Typography sx={{ p: 0, m: 0 }}>{" "}{key}:</Typography>
-                                            </Grid>
+
                                         </Grid>
                                     </MenuItem>
                                 })}
@@ -297,28 +285,22 @@ export default function PlaneacionPage(props) {
                     {
                         rows[params.row.id - 1] === undefined ?
                             <></> :
-                            Object.keys(rows[params.row.id - 1].dry_boxes).map((key) => (<Typography>{rows[params.row.id - 1].dry_boxes[key]}{key}</Typography>))
+                            Object.keys(rows[params.row.id - 1].dry_boxes).map((key) => (<Typography key={key}>{rows[params.row.id - 1].dry_boxes[key]}{key}</Typography>))
                     }
                 </List>
             )
         },
-        {
-            width: 110, field: "pull_date", headerName: "Pull Date", type: "date", editable: true, valueFormatter: params =>
-                moment(params.value).format("DD/MM/YYYY")
-        },
+        { width: 110, field: "pull_date", headerName: "Pull Date", editable: true },
         { width: 110, field: "wet_pack", headerName: "Wet Pack", editable: true },
-        {
-            width: 250, field: "comment", headerName: "Comment", editable: true
-        },
+        { width: 250, field: "comment", headerName: "Comment", editable: true },
+        { width: 110, field: "priority", headerName: "Priority", sortable: true, editable: true, type: "singleSelect", valueOptions: [" ", "Prioridad 1", "Prioridad 2", "Prioridad 3", "Pausada"] },
         { width: 110, field: "wo", headerName: "W.O.", editable: true },
         { width: 110, field: "line", headerName: "Line", editable: true, type: "singleSelect", valueOptions: (params) => (params.row.turno === "Mañana" ? ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5", "Vases 1", "Vases 2", "Linea 10 (eComerce)", "Line Dry"] : ["Línea 6", "Línea 7", "Línea 8", "Línea 9", "Línea 11", "Vases 3", "Vases 4", "Linea 10 (eComerce)"]) },
         { width: 110, field: "turno", headerName: "Turno", editable: true, type: "singleSelect", valueOptions: ["Mañana", "Tarde"] },
-        { width: 110, field: "priority", headerName: "Priority", sortable: true, editable: true, type: "singleSelect", valueOptions: ["No Priorizada", "Prioridad 1", "Prioridad 2", "Prioridad 3", "Pausada"] },
         { width: 110, field: "assigned", headerName: "Assigned To", editable: true },
         { width: 110, field: "made", headerName: "Made By", editable: true },
         { width: 110, field: "order_status", headerName: "Order Status", sortable: true, editable: true, type: "singleSelect", valueOptions: ["ARMADO", "NO ARMADO", "EN PROCESO"] },
         { width: 110, field: "scan_status", headerName: "Scan Status", sortable: true, editable: true, type: "singleSelect", valueOptions: ["ESCANEADO", "NO ESCANEADO"] },
-        { width: 110, field: "po_status", headerName: "P.O. Status", sortable: true, editable: true },
         { width: 110, field: "hargoods", headerName: "Hargoods", editable: true, type: "singleSelect", valueOptions: ["Disponible", "No en inventario"] },
         { width: 110, field: "hargoods_status", headerName: "Hargoods Status", editable: true, type: "singleSelect", valueOptions: ["Entregado", "Pendiente por entregar"] },
     ]
@@ -382,58 +364,58 @@ export default function PlaneacionPage(props) {
             data: rows
         }))
     }
+
     const renderDialogCrearRow = () => {
         const handleAddRow = () => {
-            let copy = [...rows]
-            let row = {
-                id: rows.length === 0 ? 1 : rows[rows.length - 1].id + 1,
-                date: new Date(),
-                customer: newCustomer,
-                product: newProduct,
-                po: [],
-                poDescription: {},
-                dry_boxes: [],
-                pull_date: undefined,
-                wet_pack: "",
-                wo: "",
-                line: "",
-                turno: "Mañana",
-                priority: "No Priorizada",
-                assigned: "",
-                made: "",
-                order_status: "",
-                scan_status: "",
-                comment: "",
-                po_status: "",
-                hargoods: "",
-                hargoods_status: "",
+            if (newProduct !== "") {
+                let copy = [...rows]
+                let row = {
+                    id: rows.length === 0 ? 1 : rows[rows.length - 1].id + 1,
+                    date: new Date(),
+                    customer: newCustomer,
+                    product: newProduct,
+                    po: [],
+                    poDescription: {},
+                    dry_boxes: [],
+                    pull_date: "",
+                    wet_pack: "",
+                    wo: "",
+                    line: "",
+                    turno: "Mañana",
+                    priority: "",
+                    assigned: "",
+                    made: "",
+                    order_status: "",
+                    scan_status: "",
+                    comment: "",
+                    hargoods: "",
+                    hargoods_status: "Pendiente por entregar",
+                }
+                copy.push(row)
+                setRows(copy)
+                client.send(
+                    JSON.stringify({
+                        day: props.day,
+                        type: "add",
+                        data: row,
+                        dataRows: rows,
+                        row: rows.length === 0 ? 0 : rows[rows.length - 1].id
+                    })
+                )
             }
-            copy.push(row)
-            setRows(copy)
-            client.send(
-                JSON.stringify({
-                    day: props.day,
-                    type: "add",
-                    data: row,
-                    dataRows: rows,
-                    row: rows.length === 0 ? 0 : rows[rows.length - 1].id
-                })
-            )
         }
         return (
             <Dialog height="100%" fullWidth open={dialogAdd}>
                 <DialogContent >
                     <Grid container spacing={4}>
-
-
                         <Grid item xs={6}>
                             <Autocomplete
                                 id="product-autocomplete"
                                 onChange={(e) => {
                                     console.log("cuando hay error esto es")
-                                    console.log(items[e.target.innerText])
-                                    setNewCustomer(items[e.target.innerText].poDetails[0].customer)
-                                    setNewProduct(e.target.innerText)
+                                    console.log(e)
+                                    setNewCustomer(e.target.outerText !== undefined ? items[e.target.outerText].poDetails[0].customer : "")
+                                    setNewProduct(e.target.outerText)
                                 }}
                                 options={items !== undefined ?
                                     Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : {}}
@@ -499,9 +481,9 @@ export default function PlaneacionPage(props) {
                                 </List>
 
                                 {
-                                    items[tempItem].poDetails.map((detail) => {
+                                    items[tempItem].poDetails.map((detail, idx) => {
                                         return (
-                                            <List>
+                                            <List key={idx}>
                                                 <ListItem key="po">PO: {detail.po}</ListItem>
                                                 <ListItem key="age">Age: {detail.age}</ListItem>
                                                 <ListItem key="cajas"># Cajas: {detail.numBoxes}</ListItem>
@@ -522,97 +504,18 @@ export default function PlaneacionPage(props) {
             {items !== undefined ?
                 <>
                     {
-                        renderDialogBuscarProducto()
+                        //dialogImprimirExcel()
                     }
-                    {
-                        renderDialogCrearRow()
-                    }
+                    {renderDialogBuscarProducto()}
+                    {renderDialogCrearRow()}
+
                     <Box sx={{
                         height: "95vh",
                         width: '100%',
                     }}>
                         <DataGrid
                             sx={
-                                {
-
-                                    '& .MuiDataGrid-footerContainer': {
-                                        display: "none"
-                                    },
-
-                                    '.MuiSvgIcon-root': {
-                                        color: "#fff"
-                                    },
-                                    '.MuiDataGrid-columnHeadersInner': {
-                                        backgroundColor: Paleta.azulOscuro,
-                                        color: "#fff"
-                                    },
-                                    '& .prioridad1': {
-                                        //color: "#FF0000",
-                                        backgroundColor: '#ffff00',
-                                    },
-                                    /*
-                                    '& .prioridad2': {
-                                        color: '#FF8000',
-                                    },
-                                    '& .prioridad3': {
-                                        color: '#00C244',
-                                    },
-                                    */
-                                    '& .prioridad1Cell': {
-                                        fontWeight: 900,
-                                        color: "#FF0000"
-                                    },
-                                    '& .prioridad2Cell': {
-                                        //backgroundColor: "#FFCE97" ,
-                                        fontWeight: 900,
-                                        color: "#FF8000"
-                                    },
-                                    '& .prioridad3Cell': {
-                                        //backgroundColor: "#88FFA7" ,
-                                        fontWeight: 900,
-                                        color: "#00C244"
-                                    },
-                                    '& .pausada': {
-                                        backgroundColor: "#FF0000"
-                                    },
-                                    '& .pausadaCell': {
-                                        fontWeight: 900,
-                                    },
-                                    '& .orderStatusArmadoCell': {
-                                        backgroundColor: "#92d050",
-                                        fontWeight: 900
-                                    },
-                                    '& .orderStatusNoArmadoCell': {
-                                        backgroundColor: "#ff0000",
-                                        fontWeight: 900
-                                    },
-                                    '& .orderStatusEnProcesoCell': {
-                                        backgroundColor: "#ffc000",
-                                        fontWeight: 900
-                                    },
-                                    '& .scanStatusEscaneadoCell': {
-                                        backgroundColor: "#92d050",
-                                        fontWeight: 900
-                                    },
-                                    '& .scanStatusNoEscaneadoCell': {
-                                        backgroundColor: "#ff0000",
-                                        fontWeight: 900
-                                    },
-                                    '& .hargoodsDisponibleCell': {
-                                        backgroundColor: "#a9d08e"
-                                    },
-                                    '& .hargoodsNoeninventarioCell': {
-                                        backgroundColor: "#ff6600"
-                                    },
-                                    '& .hargoodsStatusEntregadoCell': {
-                                        backgroundColor: "#a9d08e"
-                                    },
-                                    '& .hargoodsStatusPendientePorEntregarCell': {
-                                        backgroundColor: "#ffcc00"
-                                    }
-
-
-                                }
+                                styleDataGrid
                             }
                             getRowHeight={() => 'auto'}
                             pageSize={100}
@@ -640,7 +543,7 @@ export default function PlaneacionPage(props) {
                                         }
                                         break;
                                     case "priority":
-                                        if (params.value === "Prioridad 1") {
+                                        if (params.row.priority === "Prioridad 1") {
                                             return 'prioridad1Cell'
                                         } else if (params.value === "Prioridad 2") {
                                             return 'prioridad2Cell'
@@ -665,38 +568,72 @@ export default function PlaneacionPage(props) {
                                         }
                                         break;
                                     default:
-                                        return '';
-
-
+                                        break;
                                 }
-                            }}
-                            getRowClassName={(params) => {
                                 if (params.row.priority === "Prioridad 1") {
-                                    return 'prioridad1'
-                                } else if (params.row.priority === "Prioridad 2") {
-
-                                    return 'prioridad2'
-                                } else if (params.row.priority === "Prioridad 3") {
-                                    return 'prioridad3';
+                                    return "prioridad1"
                                 } else if (params.row.priority === "Pausada") {
                                     return "pausada"
                                 }
-                                return ''
-                            }}>
+                            }}
+                        >
                         </DataGrid>
-                        <Fab
-                            sx={{ backgroundColor: Paleta.azulOscuro }}
-                            style={{
-                                position: "sticky",
-                                bottom: "10px",
-                                left: "95%"
-                            }} onClick={() => {
-                                setNewCustomer("")
-                                setDialogAdd(true)
-                            }} color="primary" aria-label="add">
-                            <AddIcon />
-                        </Fab>
+                        <div style={{
+                            display: "flex",
+                            flexDirection: "row",
+                            gap: "1rem",
+                            position: "absolute",
+                            bottom: "6px",
+                            width: "max-content",
+                            left: "92%",
+                        }}>
+                            <Fab
+                                sx={{ backgroundColor: "#fff" }}
+                                onClick={() => {
+                                    let bodyTemp = rows.map(item => {
+                                        const tempRetorno = JSON.parse(JSON.stringify(item))
+                                        let tempPo = ""
+                                        for (var i = 0; i < item.po.length; i++) {
+                                            tempPo = tempPo + item.po[i].split(" ")[0] + " " + item.poDescription[Object.keys(item.poDescription)[i]] + item.po[i].charAt(item.po[i].length - 1) + "    "
+                                        }
+                                        tempRetorno["po"] = tempPo
+                                        let temp_dry = ""
+                                        Object.keys(item.dry_boxes).forEach((key) => {
+                                            temp_dry = temp_dry + item.dry_boxes[key] + key + "\n"
+                                        })
+
+                                        tempRetorno["dry_boxes"] = temp_dry
+                                        delete tempRetorno["poDescription"]
+                                        return tempRetorno
+
+                                    })
+                                    console.log(bodyTemp)
+                                    //setRowsExcel(bodyTemp)
+
+                                }}
+                            >
+                                <img
+                                    alt="Excel"
+                                    style={{
+                                        color: "#fff",
+                                        height: "30px",
+                                        width: "30px"
+                                    }}
+                                    src={Excel}></img>
+                            </Fab>
+                            <Fab
+                                sx={{ backgroundColor: Paleta.azulOscuro }}
+                                style={{
+                                    marginRight: "1rem"
+                                }} onClick={() => {
+                                    setNewCustomer("")
+                                    setDialogAdd(true)
+                                }} color="primary" aria-label="add">
+                                <AddIcon />
+                            </Fab>
+                        </div>
                     </Box>
+
                 </>
                 :
                 <div style={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
