@@ -28,6 +28,8 @@ import AddIcon from '@mui/icons-material/Add'
 import Paleta from "../util/Pallete";
 import Excel from '../images/excel-icon.svg'
 import { styleDataGrid } from "../Components/DataGridStyles";
+import { utils, writeFileXLSX } from 'xlsx';
+import { BorderStyle } from "@mui/icons-material";
 
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
@@ -48,7 +50,7 @@ export default function PlaneacionPage(props) {
     const [newProduct, setNewProduct] = useState("")
 
     const [rows, setRows] = useState([])
-    //const [rowsExcel, setRowsExcel] = useState([])
+    const [rowsExcel, setRowsExcel] = useState([])
 
     const [tempItem, setTempItem] = useState()
 
@@ -499,6 +501,33 @@ export default function PlaneacionPage(props) {
             </DialogContent>
         </Dialog>)
     }
+
+    const handleOnExport = () => {
+        let bodyTemp = rows.map(item => {
+            const tempRetorno = JSON.parse(JSON.stringify(item))
+            let tempPo = ""
+            for (var i = 0; i < item.po.length; i++) {
+                tempPo = tempPo + item.po[i].split(" ")[0] + " " + item.poDescription[Object.keys(item.poDescription)[i]] + item.po[i].charAt(item.po[i].length - 1) + "    "
+            }
+            tempRetorno["po"] = tempPo
+            let temp_dry = ""
+            Object.keys(item.dry_boxes).forEach((key) => {
+                temp_dry = temp_dry + item.dry_boxes[key] + key + "\n"
+            })
+
+            tempRetorno["dry_boxes"] = temp_dry
+            delete tempRetorno["poDescription"]
+            return tempRetorno
+
+        })
+        //console.log(bodyTemp)
+        //setRowsExcel(bodyTemp)
+        const ws = utils.json_to_sheet(bodyTemp)
+        const wb = utils.book_new()
+        utils.book_append_sheet(wb, ws, ("SameDay"));
+        writeFileXLSX(wb, "Program " + (new Date()).toLocaleDateString()+".xlsx")
+    }
+
     return (
         <div style={{ overflowY: "hidden" }}>
             {items !== undefined ?
@@ -589,28 +618,7 @@ export default function PlaneacionPage(props) {
                         }}>
                             <Fab
                                 sx={{ backgroundColor: "#fff" }}
-                                onClick={() => {
-                                    let bodyTemp = rows.map(item => {
-                                        const tempRetorno = JSON.parse(JSON.stringify(item))
-                                        let tempPo = ""
-                                        for (var i = 0; i < item.po.length; i++) {
-                                            tempPo = tempPo + item.po[i].split(" ")[0] + " " + item.poDescription[Object.keys(item.poDescription)[i]] + item.po[i].charAt(item.po[i].length - 1) + "    "
-                                        }
-                                        tempRetorno["po"] = tempPo
-                                        let temp_dry = ""
-                                        Object.keys(item.dry_boxes).forEach((key) => {
-                                            temp_dry = temp_dry + item.dry_boxes[key] + key + "\n"
-                                        })
-
-                                        tempRetorno["dry_boxes"] = temp_dry
-                                        delete tempRetorno["poDescription"]
-                                        return tempRetorno
-
-                                    })
-                                    console.log(bodyTemp)
-                                    //setRowsExcel(bodyTemp)
-
-                                }}
+                                onClick={handleOnExport}
                             >
                                 <img
                                     alt="Excel"
