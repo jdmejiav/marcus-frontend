@@ -29,8 +29,9 @@ import Paleta from "../util/Pallete";
 import Excel from '../images/excel-icon.svg'
 import { styleDataGrid } from "../Components/DataGridStyles";
 import { utils, writeFileXLSX } from 'xlsx';
-import { BorderStyle } from "@mui/icons-material";
-
+import { workOrdersFetch } from "../Components/WorkOrders";
+import QueryStatsRoundedIcon from '@mui/icons-material/QueryStatsRounded';
+import { productivities } from "../util/Productivities";
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
 export default function PlaneacionPage(props) {
@@ -42,22 +43,36 @@ export default function PlaneacionPage(props) {
     const [day, setDay] = useState(props.day)
 
     const [items, setItems] = useState(undefined)
-    //const [imprimir, setImprimir] = useState(false)
 
     const [newCustomer, setNewCustomer] = useState("")
-
-
     const [newProduct, setNewProduct] = useState("")
 
+    const [lineProduction, setLineProduction] = useState({
+        "línea 1": 0,
+        "línea 2": 0,
+        "línea 3": 0,
+        "línea 4": 0,
+        "línea 5": 0,
+        "Vases 1": 0,
+        "Vases 2": 0,
+        "Línea 10 (eComerce)": 0,
+    })
+    const [lineStatistics, setLineStatistics] = useState(false)
+
     const [rows, setRows] = useState([])
-    const [rowsExcel, setRowsExcel] = useState([])
 
     const [tempItem, setTempItem] = useState()
 
+    const [workOrders, setWorkOrders] = useState(undefined)
     // UseEffect definitions
     useEffect(() => {
         getItems()
+        fetchWo()
     }, [])
+    const fetchWo = async () => {
+
+        setWorkOrders(await workOrdersFetch())
+    }
     useEffect(() => {
         if (client.readyState === 1) {
 
@@ -111,6 +126,9 @@ export default function PlaneacionPage(props) {
             copy[e.id - 1]["po"] = []
             copy[e.id - 1]["poDescription"] = {}
         }
+        if (e.field === "wo") {
+            copy[e.id - 1]["wet_pack"] = workOrders[e.value].boxes
+        }
         setRows(copy)
         console.log(rows)
         client.send(
@@ -135,7 +153,7 @@ export default function PlaneacionPage(props) {
     const columns = [
         { field: 'id', headerName: '#', width: 20, hideable: true },
         {
-            width: 125, field: "actions", headerName: "Acciones", sortable: false, renderCell: (params) => {
+            width: 100, field: "actions", headerName: "Acciones", sortable: false, renderCell: (params) => {
                 return (
                     <>
                         <IconButton sx={{ color: "inherit" }} onClick={(e) => {
@@ -234,10 +252,14 @@ export default function PlaneacionPage(props) {
             },
         },
         {
-            width: 210, field: "poDescription", headerName: "P.O. Description", sortable: false, renderCell: (params) => {
+            width: 130, field: "poDescription", headerName: "P.O. Description", sortable: false, renderCell: (params) => {
                 return (
                     rows[params.row.id - 1] === undefined ? <></> :
-                        <List>
+                        <List sx={{
+                            '& .MuiMenuItem-root ': {
+                                padding: "5px 0px"
+                            },
+                        }}>
                             {
                                 Object.keys(rows[params.row.id - 1].poDescription).map((key, idx) => {
                                     const handleOnPONumberChange = (e) => {
@@ -262,18 +284,12 @@ export default function PlaneacionPage(props) {
                                         )
                                     }
                                     return <MenuItem key={idx}>
-                                        <Grid sx={{
-                                            alignItems: "center"
-                                        }} container spacing={1}>
-                                            <Grid sx={{ p: 0, m: 0 }} item xs={8}>
-                                                <TextField sx={{
-                                                    '& .MuiOutlinedInput-input': {
-                                                        padding: "10px 0px 10px 5px"
-                                                    }, p: 0, m: 0
-                                                }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={rows[params.row.id - 1].poDescription[key]} fullWidth />
-                                            </Grid>
+                                        <TextField sx={{
 
-                                        </Grid>
+                                            '& .MuiOutlinedInput-input': {
+                                                padding: "10px 0px 10px 5px"
+                                            }, p: 0, m: 0
+                                        }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={rows[params.row.id - 1].poDescription[key]} fullWidth />
                                     </MenuItem>
                                 })}
                         </List>
@@ -297,8 +313,8 @@ export default function PlaneacionPage(props) {
         { width: 250, field: "comment", headerName: "Comment", editable: true },
         { width: 110, field: "priority", headerName: "Priority", sortable: true, editable: true, type: "singleSelect", valueOptions: [" ", "Prioridad 1", "Prioridad 2", "Prioridad 3", "Pausada"] },
         { width: 110, field: "wo", headerName: "W.O.", editable: true },
-        { width: 110, field: "line", headerName: "Line", editable: true, type: "singleSelect", valueOptions: (params) => (params.row.turno === "Mañana" ? ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5", "Vases 1", "Vases 2", "Linea 10 (eComerce)", "Line Dry"] : ["Línea 6", "Línea 7", "Línea 8", "Línea 9", "Línea 11", "Vases 3", "Vases 4", "Linea 10 (eComerce)"]) },
-        { width: 110, field: "turno", headerName: "Turno", editable: true, type: "singleSelect", valueOptions: ["Mañana", "Tarde"] },
+        { width: 110, field: "line", headerName: "Line", editable: true, type: "singleSelect", valueOptions: (params) => (params.row.turno === "Morning" ? ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5", "Vases 1", "Vases 2", "Línea 10 (eComerce)", "Line Dry"] : ["Línea 6", "Línea 7", "Línea 8", "Línea 9", "Línea 11", "Vases 3", "Vases 4", "Linea 10 (eComerce)"]) },
+        { width: 110, field: "turno", headerName: "Turno", editable: true, type: "singleSelect", valueOptions: ["Morning", "Afternoon"] },
         { width: 110, field: "assigned", headerName: "Assigned To", editable: true },
         { width: 110, field: "made", headerName: "Made By", editable: true },
         { width: 110, field: "order_status", headerName: "Order Status", sortable: true, editable: true, type: "singleSelect", valueOptions: ["ARMADO", "NO ARMADO", "EN PROCESO"] },
@@ -331,7 +347,7 @@ export default function PlaneacionPage(props) {
                             po: val.poId,
                             age: val.age,
                             numBoxes: val.boxes,
-                            boxType: val.boxCode,
+                            boxType: val.boxCode.replace(/\s/g, ''),
                             customer: val.customer
                         })
                         products[val.name] = {
@@ -344,7 +360,7 @@ export default function PlaneacionPage(props) {
                                 po: val.poId,
                                 age: val.age,
                                 numBoxes: Number.parseInt(val.boxes),
-                                boxType: val.boxCode,
+                                boxType: val.boxCode.replace(/\s/g, ''),
                                 customer: val.customer
                             }),
                             name: val.name,
@@ -352,11 +368,63 @@ export default function PlaneacionPage(props) {
                         }
                     }
                 })
-                setItems(products)
-                setCustomers(Object.keys(customers))
+
+
+
+
+                let begin = new Date()
+
+                let end = new Date()
+                end.setDate(end.getDate() + 1)
+                await fetch("/Procurement/GetPurchaseProducts/BQC/All/?" + new URLSearchParams({
+                    dateFrom: moment(begin).format("YYYY-MM-DD"),
+                    dateTo: moment(end).format("YYYY-MM-DD")
+                }), requestOptions).then(async (res) => {
+                    const data = await res.json()
+
+                    data.forEach((val) => {
+                        if (val.dateReceived === null) {
+
+                            if (!(val.customer in customers)) {
+                                customers[val.customer] = "1"
+                            }
+                            if (val.productName in products) {
+                                const arrTemp = products[val.productName].poDetails;
+                                arrTemp.push({
+                                    po: val.poNumber,
+                                    age: "N.R",
+                                    numBoxes: val.pack,
+                                    boxType: val.boxCode.replace(/\s/g, ''),
+                                    customer: val.customer
+                                })
+                                products[val.productName] = {
+                                    poDetails: arrTemp,
+                                    numBoxes: Number.parseInt(products[val.productName].numBoxes) + Number.parseInt(val.pack)
+                                }
+                            } else {
+                                products[val.productName] = {
+                                    poDetails: Array({
+                                        po: val.poNumber,
+                                        age: "N.R",
+                                        numBoxes: Number.parseInt(val.pack),
+                                        boxType: val.boxCode.replace(/\s/g, ''),
+                                        customer: val.customer
+                                    }),
+                                    name: val.productName,
+                                    numBoxes: val.pack
+                                }
+                            }
+                        }
+                    })
+
+
+                    setItems(products)
+                    setCustomers(Object.keys(customers))
+                }).catch(error => console.log('error', error));
             })
-            .then(result => console.log(result))
             .catch(error => console.log('error', error));
+
+
     }
     const sendDeleteItem = (row) => {
         client.send(JSON.stringify({
@@ -383,7 +451,7 @@ export default function PlaneacionPage(props) {
                     wet_pack: "",
                     wo: "",
                     line: "",
-                    turno: "Mañana",
+                    turno: "Morning",
                     priority: "",
                     assigned: "",
                     made: "",
@@ -416,13 +484,13 @@ export default function PlaneacionPage(props) {
                                 onChange={(e) => {
                                     console.log("cuando hay error esto es")
                                     console.log(e)
-                                    setNewCustomer(e.target.outerText !== undefined ? items[e.target.outerText].poDetails[0].customer : "")
+                                    setNewCustomer(items[e.target.outerText] !== undefined ? items[e.target.outerText].poDetails[0].customer : "")
                                     setNewProduct(e.target.outerText)
                                 }}
                                 options={items !== undefined ?
                                     Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : {}}
 
-                                renderInput={(params) => <TextField {...params} label="Product" />} />
+                                renderInput={(params) => <TextField {...params} value={newProduct} label="Product" />} />
 
                         </Grid>
                         <Grid item xs={6}>
@@ -481,7 +549,6 @@ export default function PlaneacionPage(props) {
                                         </Typography>
                                     </ListItem>
                                 </List>
-
                                 {
                                     items[tempItem].poDetails.map((detail, idx) => {
                                         return (
@@ -502,7 +569,31 @@ export default function PlaneacionPage(props) {
         </Dialog>)
     }
 
+    const renderDialogProuctividadLineas = () => {
+        return (<Dialog open={lineStatistics}>
+            <DialogContent>
+                <Grid container spacing={1}>
+                    {
+                        Object.keys(lineProduction).sort().map(key => {
+                            return <Grid item key={key} xs={6}>
+                                <Typography>
+                                    {key}: {Math.round(lineProduction[key]).toString().padStart(2, '0')}:{(Math.round((lineProduction[key] - Math.round(lineProduction[key])) * 60)).toString().padStart(2, '0')} H
+                                </Typography>
+                            </Grid>
+                        })
+                    }
+                </Grid>
+
+                <Button onClick={() => { setLineStatistics(false) }}>
+                    Cerrar
+                </Button>
+            </DialogContent>
+        </Dialog>)
+    }
+
+
     const handleOnExport = () => {
+        let objectMaxLength = Array(21).fill(10)
         let bodyTemp = rows.map(item => {
             const tempRetorno = JSON.parse(JSON.stringify(item))
             let tempPo = ""
@@ -514,27 +605,56 @@ export default function PlaneacionPage(props) {
             Object.keys(item.dry_boxes).forEach((key) => {
                 temp_dry = temp_dry + item.dry_boxes[key] + key + "\n"
             })
-
             tempRetorno["dry_boxes"] = temp_dry
             delete tempRetorno["poDescription"]
+            for (var j = 0; j < Object.keys(tempRetorno).length; j++) {
+                if (Object.keys(tempRetorno)[j] === "po") {
+                    console.log(Object.keys(tempRetorno)[j].length)
+                }
+                if (objectMaxLength[j] < tempRetorno[Object.keys(tempRetorno)[j]].length) {
+                    objectMaxLength[j] = tempRetorno[Object.keys(tempRetorno)[j]].length
+                }
+            }
             return tempRetorno
-
         })
-        //console.log(bodyTemp)
-        //setRowsExcel(bodyTemp)
+        var wsCols = objectMaxLength.map(val => ({
+            width: val
+        }))
         const ws = utils.json_to_sheet(bodyTemp)
+        ws["!cols"] = wsCols;
         const wb = utils.book_new()
         utils.book_append_sheet(wb, ws, ("SameDay"));
-        writeFileXLSX(wb, "Program " + (new Date()).toLocaleDateString()+".xlsx")
+        writeFileXLSX(wb, "Program " + props.day + " " + (new Date()).toLocaleDateString() + ".xlsx")
+    }
+
+    const handleLineStatistics = () => {
+        const tempLineProdcution = {
+            "Línea 1": 0,
+            "Línea 2": 0,
+            "Línea 3": 0,
+            "Línea 4": 0,
+            "Línea 5": 0,
+            "Vases 1": 0,
+            "Vases 2": 0,
+            "Línea 10 (eComerce)": 0,
+        }
+        rows.forEach(row => {
+
+            if (row.wo !== "" && row.wo in workOrders) {
+                console.log(row.wo + "   " + workOrders[row.wo].task)
+                tempLineProdcution[row.line] = (tempLineProdcution[row.line] === undefined ? 0 : tempLineProdcution[row.line]) + (Number(workOrders[row.wo].boxes) / productivities[workOrders[row.wo].task])
+            }
+        })
+
+        setLineProduction(tempLineProdcution)
+        setLineStatistics(true)
     }
 
     return (
         <div style={{ overflowY: "hidden" }}>
-            {items !== undefined ?
+            {items !== undefined && workOrders !== undefined ?
                 <>
-                    {
-                        //dialogImprimirExcel()
-                    }
+                    {renderDialogProuctividadLineas()}
                     {renderDialogBuscarProducto()}
                     {renderDialogCrearRow()}
 
@@ -614,8 +734,19 @@ export default function PlaneacionPage(props) {
                             position: "absolute",
                             bottom: "6px",
                             width: "max-content",
-                            left: "92%",
+                            left: "88%",
                         }}>
+                            <Fab
+                                sx={{
+                                    backgroundColor: Paleta.amarillo,
+                                    '&:hover': {
+                                        backgroundColor: Paleta.amarilloHover
+                                    }
+                                }}
+                                onClick={handleLineStatistics}
+                            >
+                                <QueryStatsRoundedIcon />
+                            </Fab>
                             <Fab
                                 sx={{ backgroundColor: "#fff" }}
                                 onClick={handleOnExport}
@@ -640,8 +771,8 @@ export default function PlaneacionPage(props) {
                                 <AddIcon />
                             </Fab>
                         </div>
-                    </Box>
 
+                    </Box>
                 </>
                 :
                 <div style={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
