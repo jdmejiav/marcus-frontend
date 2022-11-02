@@ -127,7 +127,9 @@ export default function PlaneacionPage(props) {
             copy[e.id - 1]["poDescription"] = {}
         }
         if (e.field === "wo") {
-            copy[e.id - 1]["wet_pack"] = workOrders[e.value].boxes
+            if (workOrders[e.value] !== undefined) {
+                copy[e.id - 1]["wet_pack"] = workOrders[e.value].boxes
+            }
         }
         setRows(copy)
         console.log(rows)
@@ -284,12 +286,12 @@ export default function PlaneacionPage(props) {
                                         )
                                     }
                                     return <MenuItem key={idx}>
-                                        <TextField sx={{
+                                        <input placeholer={key.split("")} style={{ padding: "10px 0px 10px 5px", width: "100%" }} sx={{
 
                                             '& .MuiOutlinedInput-input': {
                                                 padding: "10px 0px 10px 5px"
                                             }, p: 0, m: 0
-                                        }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={rows[params.row.id - 1].poDescription[key]} fullWidth />
+                                        }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={rows[params.row.id - 1].poDescription[key]} />
                                     </MenuItem>
                                 })}
                         </List>
@@ -313,7 +315,15 @@ export default function PlaneacionPage(props) {
         { width: 250, field: "comment", headerName: "Comment", editable: true },
         { width: 110, field: "priority", headerName: "Priority", sortable: true, editable: true, type: "singleSelect", valueOptions: [" ", "Prioridad 1", "Prioridad 2", "Prioridad 3", "Pausada"] },
         { width: 110, field: "wo", headerName: "W.O.", editable: true },
-        { width: 110, field: "line", headerName: "Line", editable: true, type: "singleSelect", valueOptions: (params) => (params.row.turno === "Morning" ? ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5", "Vases 1", "Vases 2", "Línea 10 (eComerce)", "Line Dry"] : ["Línea 6", "Línea 7", "Línea 8", "Línea 9", "Línea 11", "Vases 3", "Vases 4", "Linea 10 (eComerce)"]) },
+        {
+            width: 110, field: "line", headerName: "Line", editable: true, type: "singleSelect", valueOptions: (params) => {
+                console.log(params)
+                if (params.row !== undefined) {
+                    return params.row.turno === "Morning" ? ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5", "Vases 1", "Vases 2", "Línea 10 (eComerce)", "Line Dry"] : ["Línea 6", "Línea 7", "Línea 8", "Línea 9", "Línea 11", "Vases 3", "Vases 4", "Linea 10 (eComerce)", "Line Dry"]
+                }
+                return ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5", "Línea 6", "Línea 7", "Línea 8", "Línea 9", "Línea 11", "Vases 1", "Vases 2", "Vases 3", "Vases 4", "Línea 10 (eComerce)", "Line Dry"]
+            }
+        },
         { width: 110, field: "turno", headerName: "Turno", editable: true, type: "singleSelect", valueOptions: ["Morning", "Afternoon"] },
         { width: 110, field: "assigned", headerName: "Assigned To", editable: true },
         { width: 110, field: "made", headerName: "Made By", editable: true },
@@ -334,7 +344,9 @@ export default function PlaneacionPage(props) {
         };
         await fetch("/Inventory/GetProductInventoryHistory/BQC/0", requestOptions)
             .then(async (res) => {
+                console.log(res)
                 const data = await res.json()
+                console.log(data)
                 const customers = {}
                 const products = {}
                 data.forEach((val) => {
@@ -376,6 +388,7 @@ export default function PlaneacionPage(props) {
 
                 let end = new Date()
                 end.setDate(end.getDate() + 1)
+                console.log("antes de la trajedia")
                 await fetch("/Procurement/GetPurchaseProducts/BQC/All/?" + new URLSearchParams({
                     dateFrom: moment(begin).format("YYYY-MM-DD"),
                     dateTo: moment(end).format("YYYY-MM-DD")
@@ -511,8 +524,6 @@ export default function PlaneacionPage(props) {
                                 </Select>
                             </FormControl>
                         </Grid>
-
-
                     </Grid>
                     <div style={{ marginTop: 10, display: "flex", flexDirection: "row", justifyContent: "center", alignContent: "center" }}>
                         <Button onClick={() => { setDialogAdd(false) }}>
@@ -603,7 +614,7 @@ export default function PlaneacionPage(props) {
             tempRetorno["po"] = tempPo
             let temp_dry = ""
             Object.keys(item.dry_boxes).forEach((key) => {
-                temp_dry = temp_dry + item.dry_boxes[key] + key + "\n"
+                temp_dry = temp_dry + item.dry_boxes[key] + key + " "
             })
             tempRetorno["dry_boxes"] = temp_dry
             delete tempRetorno["poDescription"]
