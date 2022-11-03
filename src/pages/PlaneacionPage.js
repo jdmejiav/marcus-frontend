@@ -68,6 +68,9 @@ export default function PlaneacionPage(props) {
     useEffect(() => {
         getItems()
         fetchWo()
+        if (localStorage.getItem("token") === null) {
+            window.location.href = "/login"
+        }
     }, [])
     const fetchWo = async () => {
 
@@ -494,11 +497,10 @@ export default function PlaneacionPage(props) {
                         <Grid item xs={6}>
                             <Autocomplete
                                 id="product-autocomplete"
-                                onChange={(e) => {
-                                    console.log("cuando hay error esto es")
-                                    console.log(e)
-                                    setNewCustomer(items[e.target.outerText] !== undefined ? items[e.target.outerText].poDetails[0].customer : "")
-                                    setNewProduct(e.target.outerText)
+                                onChange={(_, value) => {
+                                    console.log(value.label)
+                                    setNewCustomer(items[value.label] !== undefined ? items[value.label].poDetails[0].customer : "")
+                                    setNewProduct(value.label)
                                 }}
                                 options={items !== undefined ?
                                     Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : {}}

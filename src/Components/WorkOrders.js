@@ -1,4 +1,4 @@
-//import moment from "moment"
+import moment from "moment"
 
 export async function workOrdersFetch() {
     const myHeaders = new Headers();
@@ -11,17 +11,15 @@ export async function workOrdersFetch() {
         redirect: 'follow'
     };
     let workOrders = {}
-    const today = new Date() 
+    const today = new Date()
     const tumorrow = new Date()
     today.setDate(today.getDate())
     tumorrow.setDate(tumorrow.getDate() + 1)
-    //await fetch("/production/GetProductionWorkOrders/BQC/" + moment(today).format("YYYY-MM-DD") + "/" + moment(tumorrow).format("YYYY-MM-DD"), requestOptions)
-    await fetch("/production/GetProductionWorkOrders/BQC/2022-10-20/2022-10-28", requestOptions)
+    await fetch(`/production/GetProductionWorkOrders/BQC/${moment(today).format("YYYY-MM-DD")}/${moment(tumorrow).format("YYYY-MM-DD")}`, requestOptions)
         .then(async (res) => {
             const data = await res.json()
             console.log(data)
             data.forEach(item => {
-                
                 if (item.productionWorkOrderId in workOrders) {
                     workOrders[item.productionWorkOrderId].boxes = Number(workOrders[item.productionWorkOrderId].boxes) + Number(item.boxes)
                 }
@@ -37,6 +35,6 @@ export async function workOrdersFetch() {
 
         })
         .catch(error => console.log('error', error));
-    
+
     return workOrders
 }

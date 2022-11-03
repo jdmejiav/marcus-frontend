@@ -11,7 +11,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios'
 import Typography from '@mui/material/Typography'
 
-export default function LoginPage() {
+export default function SignUpPage() {
     useEffect(() => {
         if (localStorage.getItem("token") != null) {
             window.location.href = "/"
@@ -20,9 +20,17 @@ export default function LoginPage() {
 
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
+    const [firstName, setFirstName] = useState("")
+    const [lastName, setLastName] = useState("")
     const [openSuccess, setOpenSuccess] = useState(false)
     const [openFailed, setOpenFailed] = useState(false)
     const [message, setMessage] = useState("")
+    const handleOnFirstNameChange = (e) => {
+        setFirstName(e.target.value)
+    }
+    const handleOnLastNameChange = (e) => {
+        setLastName(e.target.value)
+    }
     const handleOnUsernameChange = (e) => {
         setUsername(e.target.value)
     }
@@ -30,10 +38,14 @@ export default function LoginPage() {
         setPassword(e.target.value)
     }
 
+
     const handleOnLogin = async () => {
-        await axios.post("http://20.7.2.215:8080/login", {
+        await axios.post("http://20.7.2.215:8080/register", {
+            firstName: firstName,
+            lastName: lastName,
             username: username,
             password: password
+
         }).then((res) => {
             const data = res.data;
             console.log(res.data)
@@ -58,7 +70,6 @@ export default function LoginPage() {
                 backgroundColor: Paleta.azulOscuro,
 
             }} >
-
             <Box
                 sx={{
                     '&': {
@@ -130,6 +141,7 @@ export default function LoginPage() {
                     }}>
                         <TextField
                             sx={{
+                                marginTop: 1.5,
                                 "& input": { color: "#fff" },
                                 "& label": {
                                     color: "white"
@@ -158,9 +170,75 @@ export default function LoginPage() {
                                 "& .css-1a1fmpi-MuiInputBase-root-MuiInput-root:hover ": {
                                     borderBottom: "1px solid rgba(255, 255, 255, 0.65);"
                                 }
-                            }} fullWidth id="username-input" type="text" label="User Name" variant="standard" value={username} onChange={handleOnUsernameChange} />
+                            }} fullWidth id="nombre-input" type="text" label="Nombre" variant="standard" value={firstName} onChange={handleOnFirstNameChange} />
+
                         <TextField
                             sx={{
+                                marginTop: 1.5,
+                                "& input": { color: "#fff" },
+                                "& label": {
+                                    color: "white"
+                                },
+                                "& label.Mui-focused": {
+                                    color: "white"
+                                },
+                                "& .MuiInput-underline:after": {
+                                    borderBottomColor: "white"
+                                },
+                                "& .MuiOutlinedInput-root": {
+                                    "& fieldset": {
+                                        borderColor: "white"
+                                    },
+                                    "&:hover fieldset": {
+                                        borderColor: "white",
+                                        borderWidth: 2
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                        borderColor: "white"
+                                    }
+                                },
+                                "& .css-1a1fmpi-MuiInputBase-root-MuiInput-root:before ": {
+                                    borderBottom: "1px solid rgba(255, 255, 255, 0.42);"
+                                },
+                                "& .css-1a1fmpi-MuiInputBase-root-MuiInput-root:hover ": {
+                                    borderBottom: "1px solid rgba(255, 255, 255, 0.65);"
+                                }
+                            }} fullWidth id="apellido-input" type="text" label="Apellido" variant="standard" value={lastName} onChange={handleOnLastNameChange} />
+                        <TextField
+                            sx={{
+                                marginTop: 1.5,
+                                "& input": { color: "#fff" },
+                                "& label": {
+                                    color: "white"
+                                },
+                                "& label.Mui-focused": {
+                                    color: "white"
+                                },
+                                "& .MuiInput-underline:after": {
+                                    borderBottomColor: "white"
+                                },
+                                "& .MuiOutlinedInput-root": {
+                                    "& fieldset": {
+                                        borderColor: "white"
+                                    },
+                                    "&:hover fieldset": {
+                                        borderColor: "white",
+                                        borderWidth: 2
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                        borderColor: "white"
+                                    }
+                                },
+                                "& .css-1a1fmpi-MuiInputBase-root-MuiInput-root:before ": {
+                                    borderBottom: "1px solid rgba(255, 255, 255, 0.42);"
+                                },
+                                "& .css-1a1fmpi-MuiInputBase-root-MuiInput-root:hover ": {
+                                    borderBottom: "1px solid rgba(255, 255, 255, 0.65);"
+                                }
+                            }} fullWidth id="username-input" type="text" label="Username" variant="standard" value={username} onChange={handleOnUsernameChange} />
+                        <TextField
+                            sx={{
+                                marginTop: 1.5,
                                 "& input": { color: "#fff" },
                                 "& label": {
                                     color: "white"
@@ -191,10 +269,10 @@ export default function LoginPage() {
                                 }
                             }} fullWidth id="password-input" type="password" label="Password" variant="standard" value={password} onChange={handleOnPasswordChange} />
                         <input type="submit" style={{ display: "none" }} value="Submit" />
-                        <Button onClick={handleOnLogin} sx={{ backgroundColor: "#fff", color: "#000", marginTop: "2rem", paddingTop: "1rem", paddingBottom: "1rem" }} fullWidth variant="contained">Sign In</Button>
+                        <Button onClick={handleOnLogin} sx={{ backgroundColor: "#fff", color: "#000", marginTop: "2rem", paddingTop: "1rem", paddingBottom: "1rem" }} fullWidth variant="contained">Sign Up</Button>
                     </form>
                 </Box>
-                <Typography sx={{color:"white"}}>© By Bouquet Collection</Typography>
+                <Typography sx={{ color: "white" }}>© By Bouquet Collection</Typography>
             </Box>
         </Box>)
 }
