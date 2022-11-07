@@ -52,7 +52,7 @@ export default function SignUpPage() {
             if (data.success === true) {
                 setMessage(data.message)
                 setOpenSuccess(true)
-                window.location.href = "/"
+                //window.location.href = "/"
                 localStorage.setItem("token", data.token)
             } else {
                 setMessage(data.message)

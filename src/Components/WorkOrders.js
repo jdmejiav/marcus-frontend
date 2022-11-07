@@ -27,6 +27,7 @@ export async function workOrdersFetch() {
                     workOrders[item.productionWorkOrderId] = {
                         boxes: Number(item.boxes),
                         task: item.task + item.subTask,
+                        boxCode: item.boxCode
                     }
                 }
             }

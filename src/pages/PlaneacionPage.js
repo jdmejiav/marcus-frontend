@@ -32,6 +32,8 @@ import { utils, writeFileXLSX } from 'xlsx';
 import { workOrdersFetch } from "../Components/WorkOrders";
 import QueryStatsRoundedIcon from '@mui/icons-material/QueryStatsRounded';
 import { productivities } from "../util/Productivities";
+import { Roles, RolesLineas, RolesBotones } from "../util/RolesDiagram";
+
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
 export default function PlaneacionPage(props) {
@@ -41,6 +43,7 @@ export default function PlaneacionPage(props) {
     const [dialogAdd, setDialogAdd] = useState(false)
     const [dialogBuscar, setDialogBuscar] = useState(false)
     const [day, setDay] = useState(props.day)
+    const [rol, setRol] = useState(localStorage.getItem("rol"))
 
     const [items, setItems] = useState(undefined)
 
@@ -53,8 +56,8 @@ export default function PlaneacionPage(props) {
         "línea 3": 0,
         "línea 4": 0,
         "línea 5": 0,
-        "Vases 1": 0,
-        "Vases 2": 0,
+        "Vase L1": 0,
+        "Vase L2": 0,
         "Línea 10 (eComerce)": 0,
     })
     const [lineStatistics, setLineStatistics] = useState(false)
@@ -66,6 +69,7 @@ export default function PlaneacionPage(props) {
     const [workOrders, setWorkOrders] = useState(undefined)
     // UseEffect definitions
     useEffect(() => {
+
         getItems()
         fetchWo()
         if (localStorage.getItem("token") === null) {
@@ -77,6 +81,8 @@ export default function PlaneacionPage(props) {
         setWorkOrders(await workOrdersFetch())
     }
     useEffect(() => {
+        setRol(localStorage.getItem("rol"))
+        console.log(rol)
         if (client.readyState === 1) {
 
             setDay(props.day)
@@ -132,6 +138,7 @@ export default function PlaneacionPage(props) {
         if (e.field === "wo") {
             if (workOrders[e.value] !== undefined) {
                 copy[e.id - 1]["wet_pack"] = workOrders[e.value].boxes
+                copy[e.id - 1]["box_code"] = workOrders[e.value].boxCode
             }
         }
         setRows(copy)
@@ -156,15 +163,24 @@ export default function PlaneacionPage(props) {
         setRows(copy)
     }
     const columns = [
-        { field: 'id', headerName: '#', width: 20, hideable: true },
         {
-            width: 100, field: "actions", headerName: "Acciones", sortable: false, renderCell: (params) => {
+            field: 'id', headerName: '#', width: 20,
+            editable: Roles[rol].id.edit,
+            hideable: Roles[rol].id.hideable
+        },
+        {
+            width: 100, field: "actions", headerName: "Acciones", sortable: false,
+            editable: Roles[rol].actions.edit,
+            hideable: Roles[rol].id.hideable,
+            renderCell: (params) => {
                 return (
                     <>
-                        <IconButton sx={{ color: "inherit" }} onClick={(e) => {
-                            sendDeleteItem(params.row.id)
-                        }
-                        }>
+                        <IconButton
+                            disabled={!Roles[rol].id.edit}
+                            sx={{ color: "inherit" }} onClick={(e) => {
+                                sendDeleteItem(params.row.id)
+                            }
+                            }>
                             <DeleteRoundedIcon style={{ color: "inherit" }} ></DeleteRoundedIcon>
                         </IconButton>
                         <IconButton onClick={(e) => {
@@ -177,11 +193,28 @@ export default function PlaneacionPage(props) {
                 )
             }
         },
-        { width: 100, field: "date", headerName: "Date", type: 'date', sortable: true, editable: true, valueFormatter: params => moment(params.value).format("DD/MM/YYYY") },
-        { width: 110, field: "customer", headerName: "Customer", sortable: true, editable: true, type: "singleSelect", valueOptions: customers },
-        { width: 250, field: "product", headerName: "Product", sortable: true, editable: true, type: "singleSelect", valueOptions: Object.keys(items === undefined ? {} : items) },
         {
-            width: 240, field: "po", sortable: false, headerName: "P.O.", renderCell: (params) => {
+            width: 100, field: "date", headerName: "Date", type: 'date', sortable: true,
+            editable: Roles[rol].date.edit,
+            hideable: Roles[rol].id.hideable,
+            valueFormatter: params => moment(params.value).format("DD/MM/YYYY")
+        },
+        {
+            width: 110, field: "customer", headerName: "Customer", sortable: true,
+            editable: Roles[rol].customer.edit,
+            hideable: Roles[rol].id.hideable,
+            type: "singleSelect", valueOptions: customers,
+        },
+        {
+            width: 250, field: "product", headerName: "Product", sortable: true, type: "singleSelect", valueOptions: Object.keys(items === undefined ? {} : items),
+            editable: Roles[rol].product.edit,
+            hideable: Roles[rol].id.hideable,
+        },
+        {
+            width: 240, field: "po", sortable: false, headerName: "P.O.",
+            editable: Roles[rol].po.edit,
+            hideable: Roles[rol].id.hideable,
+            renderCell: (params) => {
                 const [pos, setPos] = useState(rows[params.row.id - 1] === undefined ? [] : rows[params.row.id - 1].po)
                 useEffect(() => {
                     setPos(rows[params.row.id - 1] === undefined ? [] : rows[params.row.id - 1].po)
@@ -221,6 +254,7 @@ export default function PlaneacionPage(props) {
                     <FormControl sx={{ m: 1, width: 300 }}>
                         <InputLabel id="multiple-chip-label">P.Os</InputLabel>
                         <Select
+                            disabled={!Roles[rol].id.edit}
                             sx={{
                                 '& .MuiSvgIcon-root': {
                                     color: "inherit"
@@ -257,7 +291,10 @@ export default function PlaneacionPage(props) {
             },
         },
         {
-            width: 130, field: "poDescription", headerName: "P.O. Description", sortable: false, renderCell: (params) => {
+            width: 130, field: "poDescription", headerName: "P.O. Description", sortable: false,
+            editable: Roles[rol].poDescription.edit,
+            hideable: Roles[rol].id.hideable,
+            renderCell: (params) => {
                 return (
                     rows[params.row.id - 1] === undefined ? <></> :
                         <List sx={{
@@ -289,7 +326,7 @@ export default function PlaneacionPage(props) {
                                         )
                                     }
                                     return <MenuItem key={idx}>
-                                        <input placeholer={key.split("")} style={{ padding: "10px 0px 10px 5px", width: "100%" }} sx={{
+                                        <input disabled={!Roles[rol].id.edit} placeholer={key.split("")} style={{ padding: "10px 0px 10px 5px", width: "100%" }} sx={{
 
                                             '& .MuiOutlinedInput-input': {
                                                 padding: "10px 0px 10px 5px"
@@ -303,6 +340,7 @@ export default function PlaneacionPage(props) {
         },
         {
             width: 110, field: "dry_boxes", headerName: "Dry Boxes",
+            editable: Roles[rol].dry_boxes.edit,
             renderCell: (params) => (
                 <List>
                     {
@@ -313,27 +351,75 @@ export default function PlaneacionPage(props) {
                 </List>
             )
         },
-        { width: 110, field: "pull_date", headerName: "Pull Date", editable: true },
-        { width: 110, field: "wet_pack", headerName: "Wet Pack", editable: true },
-        { width: 250, field: "comment", headerName: "Comment", editable: true },
-        { width: 110, field: "priority", headerName: "Priority", sortable: true, editable: true, type: "singleSelect", valueOptions: [" ", "Prioridad 1", "Prioridad 2", "Prioridad 3", "Pausada"] },
-        { width: 110, field: "wo", headerName: "W.O.", editable: true },
         {
-            width: 110, field: "line", headerName: "Line", editable: true, type: "singleSelect", valueOptions: (params) => {
+            width: 110, field: "pull_date", headerName: "Pull Date",
+            editable: Roles[rol].pull_date.edit
+        },
+        {
+            width: 110, field: "wet_pack", headerName: "Wet Pack", type: "number",
+            editable: Roles[rol].wet_pack.edit
+        },
+        {
+            width: 250, field: "comment", headerName: "Comment",
+            editable: Roles[rol].comment.edit
+        },
+        {
+            width: 110, field: "priority", headerName: "Priority", sortable: true, type: "singleSelect",
+            editable: Roles[rol].priority.edit,
+            valueOptions: ["", "Prioridad 1", "Prioridad 2", "Prioridad 3", "Pausada"]
+        },
+        {
+            width: 110, field: "wo", headerName: "W.O.",
+            editable: Roles[rol].wo.edit
+        },
+        {
+            width: 110, field: "exit_order", headerName: "Orden Salida", type: "number",
+            editable: Roles[rol].exit_order.edit
+        },
+        {
+            width: 110, field: "line", headerName: "Line", type: "singleSelect",
+            editable: Roles[rol].line.edit,
+            valueOptions: (params) => {
                 console.log(params)
                 if (params.row !== undefined) {
-                    return params.row.turno === "Morning" ? ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5", "Vases 1", "Vases 2", "Línea 10 (eComerce)", "Line Dry"] : ["Línea 6", "Línea 7", "Línea 8", "Línea 9", "Línea 11", "Vases 3", "Vases 4", "Linea 10 (eComerce)", "Line Dry"]
+                    return params.row.turno === "Morning" ? ["LINE 1", "LINE 2", "LINE 3", "LINE 4", "LINE 5", "Vase L1", "Vase L2", "LINE 10 (eComerce)", "Line Dry"] : ["LINE 6", "LINE 7", "LINE 8", "LINE 9", "LINE 11", "Vase L3", "Vase L4", "Linea 10 (eComerce)", "Line Dry"]
                 }
-                return ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5", "Línea 6", "Línea 7", "Línea 8", "Línea 9", "Línea 11", "Vases 1", "Vases 2", "Vases 3", "Vases 4", "Línea 10 (eComerce)", "Line Dry"]
-            }
+                return ["LINE 1", "LINE 2", "LINE 3", "LINE 4", "LINE 5", "LINE 6", "LINE 7", "LINE 8", "LINE 9", "LINE 11", "Vase L1", "Vase L2", "Vase L3", "Vase L4", "LINE 10 (eComerce)", "Line Dry"]
+            },
         },
-        { width: 110, field: "turno", headerName: "Turno", editable: true, type: "singleSelect", valueOptions: ["Morning", "Afternoon"] },
-        { width: 110, field: "assigned", headerName: "Assigned To", editable: true },
-        { width: 110, field: "made", headerName: "Made By", editable: true },
-        { width: 110, field: "order_status", headerName: "Order Status", sortable: true, editable: true, type: "singleSelect", valueOptions: ["ARMADO", "NO ARMADO", "EN PROCESO"] },
-        { width: 110, field: "scan_status", headerName: "Scan Status", sortable: true, editable: true, type: "singleSelect", valueOptions: ["ESCANEADO", "NO ESCANEADO"] },
-        { width: 110, field: "hargoods", headerName: "Hargoods", editable: true, type: "singleSelect", valueOptions: ["Disponible", "No en inventario"] },
-        { width: 110, field: "hargoods_status", headerName: "Hargoods Status", editable: true, type: "singleSelect", valueOptions: ["Entregado", "Pendiente por entregar"] },
+        {
+            width: 110, field: "turno", headerName: "Turno", type: "singleSelect",
+            editable: Roles[rol].turno.edit,
+            valueOptions: ["Morning", "Afternoon"]
+        },
+        {
+            width: 110, field: "assigned", headerName: "Assigned To",
+            editable: Roles[rol].assigned.edit,
+        },
+        {
+            width: 110, field: "made", headerName: "Made By",
+            editable: Roles[rol].made.edit,
+        },
+        {
+            width: 110, field: "order_status", headerName: "Order Status", sortable: true, type: "singleSelect", valueOptions: ["ARMADO", "NO ARMADO", "EN PROCESO"],
+            editable: Roles[rol].order_status.edit,
+        },
+        {
+            width: 110, field: "scan_status", headerName: "Scan Status", sortable: true, type: "singleSelect", valueOptions: ["ESCANEADO", "NO ESCANEADO"],
+            editable: Roles[rol].scan_status.edit,
+        },
+        {
+            width: 110, field: "box_code", headerName: "Box Hargoods",
+            editable: Roles[rol].box_code.edit,
+        },
+        {
+            width: 110, field: "hargoods", headerName: "Hargoods", type: "singleSelect", valueOptions: ["Disponible", "No en inventario"],
+            editable: Roles[rol].hargoods.edit,
+        },
+        {
+            width: 110, field: "hargoods_status", headerName: "Hargoods Status", type: "singleSelect", valueOptions: ["Entregado", "Pendiente por entregar"],
+            editable: Roles[rol].hargoods_status.edit,
+        },
     ]
     const getItems = async () => {
         const myHeaders = new Headers();
@@ -512,6 +598,7 @@ export default function PlaneacionPage(props) {
                             <FormControl fullWidth>
                                 <InputLabel id="customer-label">Customer</InputLabel>
                                 <Select
+
                                     labelId="customer-label"
                                     id="customer-select"
                                     value={newCustomer}
@@ -641,28 +728,28 @@ export default function PlaneacionPage(props) {
     }
 
     const handleLineStatistics = () => {
+        console.log(columns.map(c =>
+            c.field
+        ))
         const tempLineProdcution = {
-            "Línea 1": 0,
-            "Línea 2": 0,
-            "Línea 3": 0,
-            "Línea 4": 0,
-            "Línea 5": 0,
-            "Vases 1": 0,
-            "Vases 2": 0,
-            "Línea 10 (eComerce)": 0,
+            "LINE 1": 0,
+            "LINE 2": 0,
+            "LINE 3": 0,
+            "LINE 4": 0,
+            "LINE 5": 0,
+            "Vase L1": 0,
+            "Vase L2": 0,
+            "LINE 10 (eComerce)": 0,
         }
         rows.forEach(row => {
-
             if (row.wo !== "" && row.wo in workOrders) {
                 console.log(row.wo + "   " + workOrders[row.wo].task)
                 tempLineProdcution[row.line] = (tempLineProdcution[row.line] === undefined ? 0 : tempLineProdcution[row.line]) + (Number(workOrders[row.wo].boxes) / productivities[workOrders[row.wo].task])
             }
         })
-
         setLineProduction(tempLineProdcution)
         setLineStatistics(true)
     }
-
     return (
         <div style={{ overflowY: "hidden" }}>
             {items !== undefined && workOrders !== undefined ?
@@ -670,15 +757,57 @@ export default function PlaneacionPage(props) {
                     {renderDialogProuctividadLineas()}
                     {renderDialogBuscarProducto()}
                     {renderDialogCrearRow()}
-
                     <Box sx={{
                         height: "95vh",
                         width: '100%',
                     }}>
                         <DataGrid
-                            sx={
-                                styleDataGrid
+                            filterModel={
+                                (
+                                    rol in RolesLineas ? {
+                                        items: [
+                                            {
+                                                columnField: "line",
+                                                operatorValue: "is",
+                                                value: rol
+                                            }
+                                        ]
+                                    } :
+                                        {
+                                            items: [
+
+                                            ]
+                                        }
+                                )
                             }
+                            columnVisibilityModel={
+                                {
+                                    id: Roles[rol].id.view,
+                                    actions: Roles[rol].actions.view,
+                                    date: Roles[rol].date.view,
+                                    customer: Roles[rol].customer.view,
+                                    product: Roles[rol].product.view,
+                                    po: Roles[rol].po.view,
+                                    poDescription: Roles[rol].poDescription.view,
+                                    dry_boxes: Roles[rol].dry_boxes.view,
+                                    pull_date: Roles[rol].pull_date.view,
+                                    wet_pack: Roles[rol].wet_pack.view,
+                                    comment: Roles[rol].comment.view,
+                                    priority: Roles[rol].priority.view,
+                                    wo: Roles[rol].wo.view,
+                                    exit_order: Roles[rol].exit_order.view,
+                                    line: Roles[rol].line.view,
+                                    turno: Roles[rol].turno.view,
+                                    assigned: Roles[rol].assigned.view,
+                                    made: Roles[rol].made.view,
+                                    order_status: Roles[rol].order_status.view,
+                                    scan_status: Roles[rol].scan_status.view,
+                                    box_code: Roles[rol].box_code.view,
+                                    hargoods: Roles[rol].hargoods.view,
+                                    hargoods_status: Roles[rol].hargoods_status.view,
+                                }
+                            }
+                            sx={styleDataGrid}
                             getRowHeight={() => 'auto'}
                             pageSize={100}
                             rowsPerPageOptions={[100]}
@@ -739,9 +868,10 @@ export default function PlaneacionPage(props) {
                                 }
                             }}
                         >
+
                         </DataGrid>
                         <div style={{
-                            display: "flex",
+                            display: (rol in RolesBotones ? "flex" : "none"),
                             flexDirection: "row",
                             gap: "1rem",
                             position: "absolute",
@@ -792,6 +922,7 @@ export default function PlaneacionPage(props) {
                     <CircularProgress />
                 </div>
             }
+
         </div >
     )
 }

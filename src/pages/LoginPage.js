@@ -42,6 +42,7 @@ export default function LoginPage() {
                 setOpenSuccess(true)
                 window.location.href = "/"
                 localStorage.setItem("token", data.token)
+                localStorage.setItem("rol", data.rol)
             } else {
                 setMessage(data.message)
                 setOpenFailed(true)
@@ -194,7 +195,7 @@ export default function LoginPage() {
                         <Button onClick={handleOnLogin} sx={{ backgroundColor: "#fff", color: "#000", marginTop: "2rem", paddingTop: "1rem", paddingBottom: "1rem" }} fullWidth variant="contained">Sign In</Button>
                     </form>
                 </Box>
-                <Typography sx={{color:"white"}}>© By Bouquet Collection</Typography>
+                <Typography sx={{ color: "white" }}>© By Bouquet Collection</Typography>
             </Box>
         </Box>)
 }
