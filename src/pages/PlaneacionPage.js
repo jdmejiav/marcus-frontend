@@ -33,6 +33,13 @@ import { workOrdersFetch } from "../Components/WorkOrders";
 import QueryStatsRoundedIcon from '@mui/icons-material/QueryStatsRounded';
 import { productivities } from "../util/Productivities";
 import { Roles, RolesLineas, RolesBotones } from "../util/RolesDiagram";
+import SwipeableDrawer from '@mui/material/SwipeableDrawer';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
+import KeyboardTabRoundedIcon from '@mui/icons-material/KeyboardTabRounded';
+import { Divider } from "@mui/material";
 
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
@@ -43,7 +50,7 @@ export default function PlaneacionPage(props) {
     const [dialogAdd, setDialogAdd] = useState(false)
     const [dialogBuscar, setDialogBuscar] = useState(false)
     const [day, setDay] = useState(props.day)
-    const [rol, setRol] = useState(localStorage.getItem("rol"))
+    const [rol, setRol] = useState("default")
 
     const [items, setItems] = useState(undefined)
 
@@ -63,7 +70,7 @@ export default function PlaneacionPage(props) {
     const [lineStatistics, setLineStatistics] = useState(false)
 
     const [rows, setRows] = useState([])
-
+    const [openSideBar, setOpenSideBar] = useState(false)
     const [tempItem, setTempItem] = useState()
 
     const [workOrders, setWorkOrders] = useState(undefined)
@@ -72,17 +79,16 @@ export default function PlaneacionPage(props) {
 
         getItems()
         fetchWo()
-        if (localStorage.getItem("token") === null) {
-            window.location.href = "/login"
-        }
+
     }, [])
     const fetchWo = async () => {
 
         setWorkOrders(await workOrdersFetch())
     }
     useEffect(() => {
-        setRol(localStorage.getItem("rol"))
-        console.log(rol)
+        console.log(localStorage.getItem("rol"))
+        setRol(localStorage.getItem("rol") === null ? "default" : localStorage.getItem("rol"))
+        console.log("rol")
         if (client.readyState === 1) {
 
             setDay(props.day)
@@ -92,18 +98,25 @@ export default function PlaneacionPage(props) {
     }, [props.day])
 
     useEffect(() => {
+        if (localStorage.getItem("token") === null) {
+            window.location.href = "/login"
+        }
         client.onopen = () => {
             console.log("WebScoket Client connected");
             fetchContent(day)
         }
         client.onmessage = (message) => {
+
             const dataFromServer = JSON.parse(message.data);
+
+            console.log(dataFromServer.day === props.day)
             if (dataFromServer.day === props.day) {
                 if (dataFromServer["type"] === 'conn') {
                     if (dataFromServer.data !== undefined) {
                         setRows(dataFromServer.data)
                     }
                 } else if (dataFromServer["type"] === 'update') {
+                    console.log("Se hace el update")
                     let row = dataFromServer["row"]
                     let copy = [...rows]
                     copy[row] = dataFromServer.data
@@ -115,9 +128,12 @@ export default function PlaneacionPage(props) {
                         setRows(copy)
                     }
                 } else if (dataFromServer["type"] === 'delete') {
-
                     console.log(dataFromServer["data"])
                     setRows(dataFromServer["data"])
+                } else if (dataFromServer["type"] === 'newday') {
+                    setRows(dataFromServer.data)
+                    console.log("Llega acá")
+
                 }
             }
         }
@@ -170,7 +186,7 @@ export default function PlaneacionPage(props) {
         },
         {
             width: 100, field: "actions", headerName: "Acciones", sortable: false,
-            editable: Roles[rol].actions.edit,
+            editable: false,
             hideable: Roles[rol].id.hideable,
             renderCell: (params) => {
                 return (
@@ -212,7 +228,7 @@ export default function PlaneacionPage(props) {
         },
         {
             width: 240, field: "po", sortable: false, headerName: "P.O.",
-            editable: Roles[rol].po.edit,
+            editable: false,
             hideable: Roles[rol].id.hideable,
             renderCell: (params) => {
                 const [pos, setPos] = useState(rows[params.row.id - 1] === undefined ? [] : rows[params.row.id - 1].po)
@@ -292,16 +308,17 @@ export default function PlaneacionPage(props) {
         },
         {
             width: 130, field: "poDescription", headerName: "P.O. Description", sortable: false,
-            editable: Roles[rol].poDescription.edit,
+            editable: false,
             hideable: Roles[rol].id.hideable,
             renderCell: (params) => {
                 return (
                     rows[params.row.id - 1] === undefined ? <></> :
-                        <List sx={{
-                            '& .MuiMenuItem-root ': {
-                                padding: "5px 0px"
-                            },
-                        }}>
+                        <List disablePadding
+                            sx={{
+                                '& .MuiMenuItem-root ': {
+                                    padding: "0px"
+                                },
+                            }}>
                             {
                                 Object.keys(rows[params.row.id - 1].poDescription).map((key, idx) => {
                                     const handleOnPONumberChange = (e) => {
@@ -325,14 +342,16 @@ export default function PlaneacionPage(props) {
                                             })
                                         )
                                     }
-                                    return <MenuItem key={idx}>
-                                        <input disabled={!Roles[rol].id.edit} placeholer={key.split("")} style={{ padding: "10px 0px 10px 5px", width: "100%" }} sx={{
+                                    return (
+                                        <MenuItem key={idx}>
+                                            <input min="0" disabled={!Roles[rol].id.edit} placeholer={key.split("")} style={{ padding: "10px 0px 10px 5px", width: "100%", backgroundColor: "inherit" }} sx={{
 
-                                            '& .MuiOutlinedInput-input': {
-                                                padding: "10px 0px 10px 5px"
-                                            }, p: 0, m: 0
-                                        }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={rows[params.row.id - 1].poDescription[key]} />
-                                    </MenuItem>
+                                                '& .MuiOutlinedInput-input': {
+                                                    padding: "10px 0px 10px 5px"
+                                                }, p: 0, m: 0
+                                            }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={Number.parseInt(rows[params.row.id - 1].poDescription[key])} />
+                                        </MenuItem>
+                                    )
                                 })}
                         </List>
                 )
@@ -340,7 +359,8 @@ export default function PlaneacionPage(props) {
         },
         {
             width: 110, field: "dry_boxes", headerName: "Dry Boxes",
-            editable: Roles[rol].dry_boxes.edit,
+            editable: false,
+            hideable: Roles[rol].dry_boxes.hideable,
             renderCell: (params) => (
                 <List>
                     {
@@ -353,7 +373,8 @@ export default function PlaneacionPage(props) {
         },
         {
             width: 110, field: "pull_date", headerName: "Pull Date",
-            editable: Roles[rol].pull_date.edit
+            editable: Roles[rol].pull_date.edit,
+            hideable: Roles[rol].pull_date.hideable,
         },
         {
             width: 110, field: "wet_pack", headerName: "Wet Pack", type: "number",
@@ -361,24 +382,29 @@ export default function PlaneacionPage(props) {
         },
         {
             width: 250, field: "comment", headerName: "Comment",
-            editable: Roles[rol].comment.edit
+            editable: Roles[rol].comment.edit,
+            hideable: Roles[rol].comment.hideable,
         },
         {
             width: 110, field: "priority", headerName: "Priority", sortable: true, type: "singleSelect",
             editable: Roles[rol].priority.edit,
+            hideable: Roles[rol].priority.hideable,
             valueOptions: ["", "Prioridad 1", "Prioridad 2", "Prioridad 3", "Pausada"]
         },
         {
             width: 110, field: "wo", headerName: "W.O.",
-            editable: Roles[rol].wo.edit
+            editable: Roles[rol].wo.edit,
+            hideable: Roles[rol].wo.hideable,
         },
         {
             width: 110, field: "exit_order", headerName: "Orden Salida", type: "number",
-            editable: Roles[rol].exit_order.edit
+            editable: Roles[rol].exit_order.edit,
+            hideable: Roles[rol].exit_order.hideable,
         },
         {
             width: 110, field: "line", headerName: "Line", type: "singleSelect",
             editable: Roles[rol].line.edit,
+            hideable: Roles[rol].line.hideable,
             valueOptions: (params) => {
                 console.log(params)
                 if (params.row !== undefined) {
@@ -390,35 +416,43 @@ export default function PlaneacionPage(props) {
         {
             width: 110, field: "turno", headerName: "Turno", type: "singleSelect",
             editable: Roles[rol].turno.edit,
+            hideable: Roles[rol].turno.hideable,
             valueOptions: ["Morning", "Afternoon"]
         },
         {
             width: 110, field: "assigned", headerName: "Assigned To",
             editable: Roles[rol].assigned.edit,
+            hideable: Roles[rol].assigned.hideable,
         },
         {
             width: 110, field: "made", headerName: "Made By",
             editable: Roles[rol].made.edit,
+            hideable: Roles[rol].made.hideable,
         },
         {
             width: 110, field: "order_status", headerName: "Order Status", sortable: true, type: "singleSelect", valueOptions: ["ARMADO", "NO ARMADO", "EN PROCESO"],
             editable: Roles[rol].order_status.edit,
+            hideable: Roles[rol].order_status.hideable,
         },
         {
             width: 110, field: "scan_status", headerName: "Scan Status", sortable: true, type: "singleSelect", valueOptions: ["ESCANEADO", "NO ESCANEADO"],
             editable: Roles[rol].scan_status.edit,
+            hideable: Roles[rol].scan_status.hideable,
         },
         {
             width: 110, field: "box_code", headerName: "Box Hargoods",
             editable: Roles[rol].box_code.edit,
+            hideable: Roles[rol].box_code.hideable,
         },
         {
             width: 110, field: "hargoods", headerName: "Hargoods", type: "singleSelect", valueOptions: ["Disponible", "No en inventario"],
             editable: Roles[rol].hargoods.edit,
+            hideable: Roles[rol].hargoods.hideable,
         },
         {
             width: 110, field: "hargoods_status", headerName: "Hargoods Status", type: "singleSelect", valueOptions: ["Entregado", "Pendiente por entregar"],
             editable: Roles[rol].hargoods_status.edit,
+            hideable: Roles[rol].hargoods_status.hideable,
         },
     ]
     const getItems = async () => {
@@ -723,10 +757,23 @@ export default function PlaneacionPage(props) {
         const ws = utils.json_to_sheet(bodyTemp)
         ws["!cols"] = wsCols;
         const wb = utils.book_new()
-        utils.book_append_sheet(wb, ws, ("SameDay"));
+        utils.book_append_sheet(wb, ws, (props.day));
         writeFileXLSX(wb, "Program " + props.day + " " + (new Date()).toLocaleDateString() + ".xlsx")
     }
+    const handleOpenSideBar = () => {
+        setOpenSideBar(true)
+    }
+    const toggleDrawer = (anchor, open) => (event) => {
+        if (
+            event &&
+            event.type === 'keydown' &&
+            (event.key === 'Tab' || event.key === 'Shift')
+        ) {
+            return;
+        }
 
+        setOpenSideBar(open);
+    };
     const handleLineStatistics = () => {
         console.log(columns.map(c =>
             c.field
@@ -750,8 +797,15 @@ export default function PlaneacionPage(props) {
         setLineProduction(tempLineProdcution)
         setLineStatistics(true)
     }
+    const handleKeyDown = (event) => {
+
+        let charCode = String.fromCharCode(event.which).toLowerCase();
+        if ((event.ctrlKey || event.metaKey) && charCode === 'z') {
+            alert("CTRL+Z Pressed");
+        }
+    }
     return (
-        <div style={{ overflowY: "hidden" }}>
+        <div onKeyDown={handleKeyDown} style={{ overflowY: "hidden" }}>
             {items !== undefined && workOrders !== undefined ?
                 <>
                     {renderDialogProuctividadLineas()}
@@ -761,25 +815,105 @@ export default function PlaneacionPage(props) {
                         height: "95vh",
                         width: '100%',
                     }}>
-                        <DataGrid
-                            filterModel={
-                                (
-                                    rol in RolesLineas ? {
-                                        items: [
-                                            {
-                                                columnField: "line",
-                                                operatorValue: "is",
-                                                value: rol
-                                            }
-                                        ]
-                                    } :
-                                        {
-                                            items: [
+                        <SwipeableDrawer
+                            open={openSideBar}
+                            anchor="bottom"
+                            onClose={toggleDrawer("bottom", false)}
+                            onOpen={toggleDrawer("bottom", true)}
+                        >
+                            <List>
 
-                                            ]
-                                        }
-                                )
+                                <ListItem>
+                                    <ListItemButton
+                                        onClick={() => {
+                                            let objectMaxLength = Array(21).fill(10)
+                                            let bodyTemp = rows.map(item => {
+                                                const tempRetorno = JSON.parse(JSON.stringify(item))
+                                                let tempPo = ""
+                                                for (var i = 0; i < item.po.length; i++) {
+                                                    tempPo = tempPo + item.po[i].split(" ")[0] + " " + item.poDescription[Object.keys(item.poDescription)[i]] + item.po[i].charAt(item.po[i].length - 1) + "    "
+                                                }
+                                                tempRetorno["po"] = tempPo
+                                                let temp_dry = ""
+                                                Object.keys(item.dry_boxes).forEach((key) => {
+                                                    temp_dry = temp_dry + item.dry_boxes[key] + key + " "
+                                                })
+                                                tempRetorno["dry_boxes"] = temp_dry
+                                                delete tempRetorno["poDescription"]
+                                                for (var j = 0; j < Object.keys(tempRetorno).length; j++) {
+                                                    if (Object.keys(tempRetorno)[j] === "po") {
+                                                        console.log(Object.keys(tempRetorno)[j].length)
+                                                    }
+                                                    if (objectMaxLength[j] < tempRetorno[Object.keys(tempRetorno)[j]].length) {
+                                                        objectMaxLength[j] = tempRetorno[Object.keys(tempRetorno)[j]].length
+                                                    }
+                                                }
+                                                return tempRetorno
+                                            })
+                                            var wsCols = objectMaxLength.map(val => ({
+                                                width: val
+                                            }))
+                                            const ws = utils.json_to_sheet(bodyTemp)
+                                            ws["!cols"] = wsCols;
+                                            const wb = utils.book_new()
+                                            utils.book_append_sheet(wb, ws, ("sameday"));
+                                            writeFileXLSX(wb, "Program " + (new Date()).toLocaleDateString() + ".xlsx")
+                                            client.send(
+                                                JSON.stringify({
+                                                    day: props.day,
+                                                    type: "newday",
+                                                })
+                                            )
+
+
+                                        }}>
+                                        <ListItemIcon>
+                                            <KeyboardTabRoundedIcon />
+                                        </ListItemIcon>
+                                        <ListItemText>Cambio de día</ListItemText>
+                                    </ListItemButton>
+                                </ListItem>
+                                <Divider />
+                                <ListItem>
+                                    <ListItemButton
+                                        onClick={() => {
+                                            localStorage.clear()
+                                            window.location.href = "/login"
+                                        }}>
+                                        <ListItemIcon>
+                                            <LogoutRoundedIcon />
+                                        </ListItemIcon>
+                                        <ListItemText>Cerrar Sesión</ListItemText>
+                                    </ListItemButton>
+                                </ListItem>
+                            </List>
+                        </SwipeableDrawer>
+                        <DataGrid
+                            initialState={
+                                {
+                                    filter: {
+                                        filterModel:
+                                            (
+                                                rol in RolesLineas ? {
+                                                    items: [
+                                                        {
+                                                            columnField: "line",
+                                                            operatorValue: "is",
+                                                            value: rol
+                                                        }
+                                                    ]
+                                                } :
+                                                    {
+                                                        items: [
+                                                            {}
+                                                        ]
+                                                    }
+                                            )
+
+                                    }
+                                }
                             }
+
                             columnVisibilityModel={
                                 {
                                     id: Roles[rol].id.view,
@@ -868,7 +1002,6 @@ export default function PlaneacionPage(props) {
                                 }
                             }}
                         >
-
                         </DataGrid>
                         <div style={{
                             display: (rol in RolesBotones ? "flex" : "none"),
@@ -877,8 +1010,19 @@ export default function PlaneacionPage(props) {
                             position: "absolute",
                             bottom: "6px",
                             width: "max-content",
-                            left: "88%",
+                            left: "84%",
                         }}>
+                            <Fab
+                                sx={{
+                                    backgroundColor: "#000",
+                                    '&:hover': {
+                                        backgroundColor: "rgba(0,0,0,0.6)"
+                                    }
+                                }}
+                                onClick={handleOpenSideBar}
+                            >
+                                <SettingsRoundedIcon sx={{ color: "#fff" }} />
+                            </Fab>
                             <Fab
                                 sx={{
                                     backgroundColor: Paleta.amarillo,

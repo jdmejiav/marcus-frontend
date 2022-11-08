@@ -10,6 +10,7 @@ import background from "../images/background.png";
 import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios'
 import Typography from '@mui/material/Typography'
+import BouquetImage from "../images/bouquet-collection.png"
 
 export default function LoginPage() {
     useEffect(() => {
@@ -115,20 +116,28 @@ export default function LoginPage() {
                         {message}
                     </Alert>
                 </Collapse>
+                
                 <Box sx={{
                     borderRadius: "30px",
                     width: "25vw",
-                    padding: "3rem",
+                    padding: "0 3rem 3rem 3rem",
                     backgroundColor: "rgba(0,0,0,0.2)",
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: "1.5rem",
+                    
                 }}>
+                    <img style={{
+                        marginTop:"1rem",
+                        width:"150px",
+                        height:"auto",
+                        
+                    }} src={BouquetImage} alt="bouquet-logo"></img>
                     <form onSubmit={(event) => {
                         event.preventDefault()
                         handleOnLogin();
                     }}>
+                        
                         <TextField
                             sx={{
                                 "& input": { color: "#fff" },

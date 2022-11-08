@@ -76,7 +76,7 @@ export const Roles = {
         hargoods_status: { view: true, edit: true, hideable: true },
     },
     "hargoods": {
-        id: { view: true, edit: true, hideable: true },
+        id: { view: true, edit: false, hideable: true },
         actions: { view: false, edit: false, hideable: false },
         date: { view: true, edit: true, hideable: true },
         customer: { view: true, edit: true, hideable: true },
@@ -101,7 +101,7 @@ export const Roles = {
         hargoods_status: { view: true, edit: true, hideable: true },
     },
     "receiving": {
-        id: { view: true, edit: true, hideable: true },
+        id: { view: true, edit: false, hideable: true },
         actions: { view: true, edit: true, hideable: true },
         date: { view: true, edit: true, hideable: true },
         customer: { view: true, edit: true, hideable: true },
@@ -150,6 +150,31 @@ export const Roles = {
         hargoods: { view: true, edit: false, hideable: true },
         hargoods_status: { view: true, edit: false, hideable: true },
     },
+    "default": {
+        id: { view: true, edit: false , hideable: false },
+        actions: { view: false, edit: false , hideable: false },
+        date: { view: true, edit: false , hideable: false },
+        customer: { view: true, edit: false , hideable: false },
+        product: { view: true, edit: false , hideable: false },
+        po: { view: true, edit: false , hideable: false },
+        poDescription: { view: true, edit: false , hideable: false },
+        dry_boxes: { view: true, edit: false , hideable: false },
+        pull_date: { view: true, edit: false , hideable: false },
+        wet_pack: { view: true, edit: false , hideable: false },
+        comment: { view: true, edit: false , hideable: false },
+        priority: { view: true, edit: false , hideable: false },
+        wo: { view: true, edit: false , hideable: false },
+        exit_order: { view: true, edit: false , hideable: false },
+        line: { view: true, edit: false , hideable: false },
+        turno: { view: true, edit: false , hideable: false },
+        assigned: { view: true, edit: false , hideable: false },
+        made: { view: true, edit: false , hideable: false },
+        order_status: { view: true, edit: false , hideable: false },
+        scan_status: { view: true, edit: false , hideable: false },
+        box_code: { view: true, edit: false , hideable: false },
+        hargoods: { view: true, edit: false , hideable: false },
+        hargoods_status: { view: true, edit: false , hideable: false },
+    },
     "LINE 1": line,
     "LINE 2": line,
     "LINE 3": line,
@@ -168,7 +193,7 @@ export const Roles = {
     "LINE Dry": line,
 }
 
-export const RolesBotones = ["admin","planeacion","receiving"]
+export const RolesBotones = { "admin": 1, "planeacion": 1, "receiving": 1 }
 
 export const RolesLineas = {
     "LINE 1": line,
