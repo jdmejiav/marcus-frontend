@@ -116,7 +116,7 @@ export default function PlaneacionPage(props) {
                         setRows(dataFromServer.data)
                     }
                 } else if (dataFromServer["type"] === 'update') {
-                    console.log("Se hace el update")
+
                     let row = dataFromServer["row"]
                     let copy = [...rows]
                     copy[row] = dataFromServer.data
@@ -132,8 +132,9 @@ export default function PlaneacionPage(props) {
                     setRows(dataFromServer["data"])
                 } else if (dataFromServer["type"] === 'newday') {
                     setRows(dataFromServer.data)
-                    console.log("Llega acá")
-
+                } else if (dataFromServer["type"] === 'recoverHist') {
+                    console.log("Llega del recoverHist ",dataFromServer.data)
+                    setRows(dataFromServer.data)
                 }
             }
         }
@@ -150,13 +151,14 @@ export default function PlaneacionPage(props) {
         if (e.field === "product") {
             copy[e.id - 1]["po"] = []
             copy[e.id - 1]["poDescription"] = {}
-        }
-        if (e.field === "wo") {
-            if (workOrders[e.value] !== undefined) {
-                copy[e.id - 1]["wet_pack"] = workOrders[e.value].boxes
-                copy[e.id - 1]["box_code"] = workOrders[e.value].boxCode
+        } else
+            if (e.field === "wo") {
+                if (workOrders[e.value] !== undefined) {
+                    copy[e.id - 1]["wet_pack"] = workOrders[e.value].boxes
+                    copy[e.id - 1]["box_code"] = workOrders[e.value].boxCode
+                }
             }
-        }
+
         setRows(copy)
         console.log(rows)
         client.send(
@@ -175,6 +177,33 @@ export default function PlaneacionPage(props) {
         Object.keys(cajas).map((key) => (
             count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
         ))
+
+
+        let qc = false
+        console.log(items[copy[row].product])
+        items[copy[row].product].poDetails.forEach(item => {
+            console.log(item)
+            if (item.reference.includes("QC")) {
+                Object.keys(copy[row].poDescription).forEach(po => {
+                    if (po.split(" ")[0] === item.po)
+                        qc = true
+                })
+            }
+        })
+        if (qc) {
+            const tempCommentSplit = copy[row].comment.split("|")
+            let tempComment = ""
+            if (!copy[row].comment.includes("Quality Check"))
+                if (tempCommentSplit.length > 1) {
+                    copy[row].comment = copy[row].comment + " Quality Check"
+                } else {
+                    tempComment = tempCommentSplit[0] + "| Quality Check"
+                    copy[row].comment = tempComment
+                }
+        } else {
+            copy[row].comment = copy[row].comment.replace("| Quality Check", '')
+        }
+
         copy[row].dry_boxes = count
         setRows(copy)
     }
@@ -187,12 +216,12 @@ export default function PlaneacionPage(props) {
         {
             width: 100, field: "actions", headerName: "Acciones", sortable: false,
             editable: false,
-            hideable: Roles[rol].id.hideable,
+            hideable: Roles[rol].actions.hideable,
             renderCell: (params) => {
                 return (
                     <>
                         <IconButton
-                            disabled={!Roles[rol].id.edit}
+                            disabled={!Roles[rol].actions.edit}
                             sx={{ color: "inherit" }} onClick={(e) => {
                                 sendDeleteItem(params.row.id)
                             }
@@ -212,24 +241,24 @@ export default function PlaneacionPage(props) {
         {
             width: 100, field: "date", headerName: "Date", type: 'date', sortable: true,
             editable: Roles[rol].date.edit,
-            hideable: Roles[rol].id.hideable,
+            hideable: Roles[rol].date.hideable,
             valueFormatter: params => moment(params.value).format("DD/MM/YYYY")
         },
         {
             width: 110, field: "customer", headerName: "Customer", sortable: true,
             editable: Roles[rol].customer.edit,
-            hideable: Roles[rol].id.hideable,
+            hideable: Roles[rol].customer.hideable,
             type: "singleSelect", valueOptions: customers,
         },
         {
             width: 250, field: "product", headerName: "Product", sortable: true, type: "singleSelect", valueOptions: Object.keys(items === undefined ? {} : items),
             editable: Roles[rol].product.edit,
-            hideable: Roles[rol].id.hideable,
+            hideable: Roles[rol].product.hideable,
         },
         {
             width: 240, field: "po", sortable: false, headerName: "P.O.",
             editable: false,
-            hideable: Roles[rol].id.hideable,
+            hideable: Roles[rol].po.hideable,
             renderCell: (params) => {
                 const [pos, setPos] = useState(rows[params.row.id - 1] === undefined ? [] : rows[params.row.id - 1].po)
                 useEffect(() => {
@@ -240,10 +269,12 @@ export default function PlaneacionPage(props) {
                         target: { value },
                     } = event;
                     let copy = rows
+                    /*
                     setPos(
                         // On autofill we get a stringified value.
                         typeof value === 'string' ? value.splvalue.split(',') : value
                     );
+                    */
                     // Add items that are on POs Columns but not in te PO Details (When adding items)
                     let copyPoDetails = copy[params.row.id - 1].poDescription;
                     for (var key of (typeof value === 'string' ? value.splvalue.split(',') : value)) {
@@ -255,8 +286,25 @@ export default function PlaneacionPage(props) {
                     let finalCopy = Object.fromEntries(value.map((key) => [key, copyPoDetails[key]]))
                     copy[params.row.id - 1].po = value
                     copy[params.row.id - 1].poDescription = finalCopy
-                    setRows(copy)
+                    //setRows(copy)
                     updateDry(params.row.id - 1)
+                    let tempComment = ""
+                    Object.keys(copy[params.row.id - 1].poDescription).forEach((item) => {
+                        tempComment = tempComment + item.split(" ")[0] + " " + copy[params.row.id - 1].poDescription[item] + item.charAt(item.length - 1) + "  "
+                    })
+                    const tempCommentSplit = copy[params.row.id - 1].comment.split("|")
+
+                    if (tempCommentSplit.length > 1) {
+                        let tempCommentFinal = ""
+                        for (var i = 1; i < tempCommentSplit.length; i = i + 1) {
+                            tempCommentFinal = tempCommentFinal + tempCommentSplit[i]
+                        }
+                        copy[params.row.id - 1].comment = tempComment + " | " + tempCommentFinal
+                    } else {
+                        copy[params.row.id - 1].comment = tempComment
+                    }
+
+
                     client.send(
                         JSON.stringify({
                             day: props.day,
@@ -270,7 +318,7 @@ export default function PlaneacionPage(props) {
                     <FormControl sx={{ m: 1, width: 300 }}>
                         <InputLabel id="multiple-chip-label">P.Os</InputLabel>
                         <Select
-                            disabled={!Roles[rol].id.edit}
+                            disabled={!Roles[rol].po.edit}
                             sx={{
                                 '& .MuiSvgIcon-root': {
                                     color: "inherit"
@@ -309,7 +357,7 @@ export default function PlaneacionPage(props) {
         {
             width: 130, field: "poDescription", headerName: "P.O. Description", sortable: false,
             editable: false,
-            hideable: Roles[rol].id.hideable,
+            hideable: Roles[rol].poDescription.hideable,
             renderCell: (params) => {
                 return (
                     rows[params.row.id - 1] === undefined ? <></> :
@@ -328,6 +376,22 @@ export default function PlaneacionPage(props) {
                                         if ((Number.parseInt(e.target.value) <= Number.parseInt(maxBoxes) && Number.parseInt(e.target.value) >= 0) || e.target.value === '') {
                                             copy[params.row.id - 1].poDescription[key] = (e.target.value === '' ? 0 : Number.parseInt(e.target.value))
                                         }
+                                        let tempComment = ""
+                                        Object.keys(copy[params.row.id - 1].poDescription).forEach((item) => {
+                                            tempComment = tempComment + item.split(" ")[0] + " " + copy[params.row.id - 1].poDescription[item] + item.charAt(item.length - 1) + "  "
+                                        })
+                                        const tempCommentSplit = copy[params.row.id - 1].comment.split("|")
+
+                                        if (tempCommentSplit.length > 1) {
+                                            let tempCommentFinal = ""
+                                            for (var i = 1; i < tempCommentSplit.length; i = i + 1) {
+                                                tempCommentFinal = tempCommentFinal + tempCommentSplit[i]
+                                            }
+                                            copy[params.row.id - 1].comment = tempComment + " |" + tempCommentFinal
+                                        } else {
+                                            copy[params.row.id - 1].comment = tempComment
+                                        }
+
                                         setRows(copy)
                                         updateDry(params.row.id - 1)
                                     }
@@ -344,8 +408,7 @@ export default function PlaneacionPage(props) {
                                     }
                                     return (
                                         <MenuItem key={idx}>
-                                            <input min="0" disabled={!Roles[rol].id.edit} placeholer={key.split("")} style={{ padding: "10px 0px 10px 5px", width: "100%", backgroundColor: "inherit" }} sx={{
-
+                                            <input min="0" disabled={!Roles[rol].poDescription.edit} placeholer={key.split("")} style={{ padding: "10px 0px 10px 5px", margin: "2px 0px", border: "1px solid", borderColor: "rgba(60,60,60,0.5)", borderRadius: "5px", width: "100%", backgroundColor: "inherit" }} sx={{
                                                 '& .MuiOutlinedInput-input': {
                                                     padding: "10px 0px 10px 5px"
                                                 }, p: 0, m: 0
@@ -467,9 +530,8 @@ export default function PlaneacionPage(props) {
         };
         await fetch("/Inventory/GetProductInventoryHistory/BQC/0", requestOptions)
             .then(async (res) => {
-                console.log(res)
+
                 const data = await res.json()
-                console.log(data)
                 const customers = {}
                 const products = {}
                 data.forEach((val) => {
@@ -483,7 +545,8 @@ export default function PlaneacionPage(props) {
                             age: val.age,
                             numBoxes: val.boxes,
                             boxType: val.boxCode.replace(/\s/g, ''),
-                            customer: val.customer
+                            customer: val.customer,
+                            reference: val.reference
                         })
                         products[val.name] = {
                             poDetails: arrTemp,
@@ -496,31 +559,24 @@ export default function PlaneacionPage(props) {
                                 age: val.age,
                                 numBoxes: Number.parseInt(val.boxes),
                                 boxType: val.boxCode.replace(/\s/g, ''),
-                                customer: val.customer
+                                customer: val.customer,
+                                reference: val.reference
                             }),
                             name: val.name,
                             numBoxes: val.boxes
                         }
                     }
                 })
-
-
-
-
                 let begin = new Date()
-
                 let end = new Date()
                 end.setDate(end.getDate() + 1)
-                console.log("antes de la trajedia")
                 await fetch("/Procurement/GetPurchaseProducts/BQC/All/?" + new URLSearchParams({
                     dateFrom: moment(begin).format("YYYY-MM-DD"),
                     dateTo: moment(end).format("YYYY-MM-DD")
                 }), requestOptions).then(async (res) => {
                     const data = await res.json()
-
                     data.forEach((val) => {
                         if (val.dateReceived === null) {
-
                             if (!(val.customer in customers)) {
                                 customers[val.customer] = "1"
                             }
@@ -531,7 +587,8 @@ export default function PlaneacionPage(props) {
                                     age: "N.R",
                                     numBoxes: val.pack,
                                     boxType: val.boxCode.replace(/\s/g, ''),
-                                    customer: val.customer
+                                    customer: val.customer,
+                                    reference: val.reference
                                 })
                                 products[val.productName] = {
                                     poDetails: arrTemp,
@@ -544,7 +601,8 @@ export default function PlaneacionPage(props) {
                                         age: "N.R",
                                         numBoxes: Number.parseInt(val.pack),
                                         boxType: val.boxCode.replace(/\s/g, ''),
-                                        customer: val.customer
+                                        customer: val.customer,
+                                        reference: val.reference
                                     }),
                                     name: val.productName,
                                     numBoxes: val.pack
@@ -552,15 +610,11 @@ export default function PlaneacionPage(props) {
                             }
                         }
                     })
-
-
                     setItems(products)
                     setCustomers(Object.keys(customers))
                 }).catch(error => console.log('error', error));
             })
             .catch(error => console.log('error', error));
-
-
     }
     const sendDeleteItem = (row) => {
         client.send(JSON.stringify({
@@ -570,7 +624,6 @@ export default function PlaneacionPage(props) {
             data: rows
         }))
     }
-
     const renderDialogCrearRow = () => {
         const handleAddRow = () => {
             if (newProduct !== "") {
@@ -663,46 +716,46 @@ export default function PlaneacionPage(props) {
             </Dialog >)
     }
     const renderDialogBuscarProducto = () => {
-        return (<Dialog open={dialogBuscar}>
-            <DialogContent>
-                {items === undefined ? <></> :
-                    (
-                        items[tempItem] !== undefined ?
+        return (
+            <Dialog open={dialogBuscar}>
+                <DialogContent>
+                    {items === undefined ? <></> :
+                        (
+                            items[tempItem] !== undefined ?
+                                <Grid item style={{ margin: 10, display: "flex", flexDirection: "row", overflow: "auto" }} xs={12}>
 
-                            <Grid item style={{ margin: 10, display: "flex", flexDirection: "row", overflow: "auto" }} xs={12}>
-
-                                <List>
-                                    <ListItem key="nombre">
-                                        <Typography>
-                                            {tempItem}
-                                        </Typography>
-                                    </ListItem>
-                                    <ListItem key="infoProducto">
-                                        <Typography>
-                                            Total Cajas: {items[tempItem] !== undefined ? items[tempItem].numBoxes : <></>}
-                                        </Typography>
-                                    </ListItem>
-                                </List>
-                                {
-                                    items[tempItem].poDetails.map((detail, idx) => {
-                                        return (
-                                            <List key={idx}>
-                                                <ListItem key="po">PO: {detail.po}</ListItem>
-                                                <ListItem key="age">Age: {detail.age}</ListItem>
-                                                <ListItem key="cajas"># Cajas: {detail.numBoxes}</ListItem>
-                                            </List>
-                                        )
-                                    })
-                                }
-                            </Grid> : <></>)
-                }
-                <Button onClick={() => { setDialogBuscar(false) }}>
-                    Cerrar
-                </Button>
-            </DialogContent>
-        </Dialog>)
+                                    <List>
+                                        <ListItem key="nombre">
+                                            <Typography>
+                                                {tempItem}
+                                            </Typography>
+                                        </ListItem>
+                                        <ListItem key="infoProducto">
+                                            <Typography>
+                                                Total Cajas: {items[tempItem] !== undefined ? items[tempItem].numBoxes : <></>}
+                                            </Typography>
+                                        </ListItem>
+                                    </List>
+                                    {
+                                        items[tempItem].poDetails.map((detail, idx) => {
+                                            return (
+                                                <List key={idx}>
+                                                    <ListItem key="po">PO: {detail.po}</ListItem>
+                                                    <ListItem key="age">Age: {detail.age}</ListItem>
+                                                    <ListItem key="cajas"># Cajas: {detail.numBoxes}</ListItem>
+                                                </List>
+                                            )
+                                        })
+                                    }
+                                </Grid> : <></>)
+                    }
+                    <Button onClick={() => { setDialogBuscar(false) }}>
+                        Cerrar
+                    </Button>
+                </DialogContent>
+            </Dialog>
+        )
     }
-
     const renderDialogProuctividadLineas = () => {
         return (<Dialog open={lineStatistics}>
             <DialogContent>
@@ -717,15 +770,13 @@ export default function PlaneacionPage(props) {
                         })
                     }
                 </Grid>
-
                 <Button onClick={() => { setLineStatistics(false) }}>
                     Cerrar
                 </Button>
             </DialogContent>
-        </Dialog>)
+        </Dialog>
+        )
     }
-
-
     const handleOnExport = () => {
         let objectMaxLength = Array(21).fill(10)
         let bodyTemp = rows.map(item => {
@@ -798,10 +849,14 @@ export default function PlaneacionPage(props) {
         setLineStatistics(true)
     }
     const handleKeyDown = (event) => {
-
+        
         let charCode = String.fromCharCode(event.which).toLowerCase();
         if ((event.ctrlKey || event.metaKey) && charCode === 'z') {
-            alert("CTRL+Z Pressed");
+            client.send(JSON.stringify({
+                day: props.day,
+                type: "recoverHist",
+            }))
+
         }
     }
     return (
@@ -823,8 +878,11 @@ export default function PlaneacionPage(props) {
                         >
                             <List>
 
-                                <ListItem>
+                                <ListItem sx={{
+                                    display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
+                                }}>
                                     <ListItemButton
+
                                         onClick={() => {
                                             let objectMaxLength = Array(21).fill(10)
                                             let bodyTemp = rows.map(item => {
@@ -889,6 +947,7 @@ export default function PlaneacionPage(props) {
                             </List>
                         </SwipeableDrawer>
                         <DataGrid
+                            aria-label="Marco"
                             initialState={
                                 {
                                     filter: {

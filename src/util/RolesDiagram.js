@@ -75,7 +75,7 @@ export const Roles = {
         hargoods: { view: true, edit: true, hideable: true },
         hargoods_status: { view: true, edit: true, hideable: true },
     },
-    "hargoods": {
+    "hardgoods": {
         id: { view: true, edit: false, hideable: true },
         actions: { view: false, edit: false, hideable: false },
         date: { view: true, edit: true, hideable: true },
@@ -94,8 +94,8 @@ export const Roles = {
         turno: { view: false, edit: false, hideable: true },
         assigned: { view: false, edit: false, hideable: true },
         made: { view: true, edit: false, hideable: true },
-        order_status: { view: true, edit: true, hideable: true },
-        scan_status: { view: true, edit: true, hideable: true },
+        order_status: { view: true, edit: false, hideable: true },
+        scan_status: { view: true, edit: false, hideable: true },
         box_code: { view: true, edit: false, hideable: true },
         hargoods: { view: true, edit: true, hideable: true },
         hargoods_status: { view: true, edit: true, hideable: true },

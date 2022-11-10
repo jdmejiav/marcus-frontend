@@ -127,12 +127,16 @@ export default function LoginPage() {
                     alignItems: 'center',
                     
                 }}>
+                    <Typography sx={{color:"#fff", fontSize:"60px", fontWeight:"600", fontFamily:"Archivo, sans-serif"}}>
+                        MARCUS
+                    </Typography>
                     <img style={{
                         marginTop:"1rem",
-                        width:"150px",
+                        width:"130px",
                         height:"auto",
                         
                     }} src={BouquetImage} alt="bouquet-logo"></img>
+                    
                     <form onSubmit={(event) => {
                         event.preventDefault()
                         handleOnLogin();
