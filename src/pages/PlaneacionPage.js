@@ -40,6 +40,8 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import KeyboardTabRoundedIcon from '@mui/icons-material/KeyboardTabRounded';
 import { Divider } from "@mui/material";
+import DialogComponent from "../Components/DialogComponent";
+import axios from "axios";
 
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
@@ -69,9 +71,14 @@ export default function PlaneacionPage(props) {
     })
     const [lineStatistics, setLineStatistics] = useState(false)
 
+    const [recipes, setRecipes] = useState(axios.get("http://localhost:8080/recipes").then(async (res) => {
+        const data = await res.data
+        return data
+    }))
     const [rows, setRows] = useState([])
     const [openSideBar, setOpenSideBar] = useState(false)
     const [tempItem, setTempItem] = useState()
+
 
     const [workOrders, setWorkOrders] = useState(undefined)
     // UseEffect definitions
@@ -79,16 +86,20 @@ export default function PlaneacionPage(props) {
 
         getItems()
         fetchWo()
-
+        getRecipes()
     }, [])
+    const getRecipes = async () => {
+        await axios.get("http://localhost:8080/recipes").then(async (res) => {
+            const data = await res.data
+            setRecipes(data)
+        })
+    }
     const fetchWo = async () => {
 
         setWorkOrders(await workOrdersFetch())
     }
     useEffect(() => {
-        console.log(localStorage.getItem("rol"))
         setRol(localStorage.getItem("rol") === null ? "default" : localStorage.getItem("rol"))
-        console.log("rol")
         if (client.readyState === 1) {
 
             setDay(props.day)
@@ -106,10 +117,7 @@ export default function PlaneacionPage(props) {
             fetchContent(day)
         }
         client.onmessage = (message) => {
-
             const dataFromServer = JSON.parse(message.data);
-
-            console.log(dataFromServer.day === props.day)
             if (dataFromServer.day === props.day) {
                 if (dataFromServer["type"] === 'conn') {
                     if (dataFromServer.data !== undefined) {
@@ -133,7 +141,7 @@ export default function PlaneacionPage(props) {
                 } else if (dataFromServer["type"] === 'newday') {
                     setRows(dataFromServer.data)
                 } else if (dataFromServer["type"] === 'recoverHist') {
-                    console.log("Llega del recoverHist ",dataFromServer.data)
+                    console.log("Llega del recoverHist ", dataFromServer.data)
                     setRows(dataFromServer.data)
                 }
             }
@@ -177,8 +185,6 @@ export default function PlaneacionPage(props) {
         Object.keys(cajas).map((key) => (
             count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
         ))
-
-
         let qc = false
         console.log(items[copy[row].product])
         items[copy[row].product].poDetails.forEach(item => {
@@ -664,16 +670,21 @@ export default function PlaneacionPage(props) {
             }
         }
         return (
-            <Dialog height="100%" fullWidth open={dialogAdd}>
-                <DialogContent >
+
+            <DialogComponent visible={dialogAdd}>
+                <Box style={{ backgroundColor: "#fff", padding: "2.5rem 2.5rem 1rem 2.5rem", borderRadius: "1rem", width: "50vw" }}>
                     <Grid container spacing={4}>
                         <Grid item xs={6}>
                             <Autocomplete
                                 id="product-autocomplete"
                                 onChange={(_, value) => {
-                                    console.log(value.label)
-                                    setNewCustomer(items[value.label] !== undefined ? items[value.label].poDetails[0].customer : "")
-                                    setNewProduct(value.label)
+                                    if (value !== null) {
+                                        setNewCustomer(items[value.label] !== undefined ? items[value.label].poDetails[0].customer : "")
+                                        setNewProduct(value.label)
+                                    } else {
+                                        setNewCustomer("")
+                                        setNewProduct("")
+                                    }
                                 }}
                                 options={items !== undefined ?
                                     Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : {}}
@@ -701,19 +712,34 @@ export default function PlaneacionPage(props) {
                             </FormControl>
                         </Grid>
                     </Grid>
-                    <div style={{ marginTop: 10, display: "flex", flexDirection: "row", justifyContent: "center", alignContent: "center" }}>
-                        <Button onClick={() => { setDialogAdd(false) }}>
+                    <div style={{ marginTop: 10, display: "flex", flexDirection: "row", justifyContent: "center", alignContent: "center", gap: "2rem" }}>
+                        <Button variant="contianed" sx={{
+                            color: "#fff",
+                            backgroundColor: "RGBA(255, 0, 0, 1)",
+                            "&:hover": {
+                                backgroundColor: "RGBA(255,0,0,0.8)"
+                            }
+                        }} onClick={() => { setDialogAdd(false) }}>
                             Cerrar
                         </Button>
-                        <Button onClick={() => {
-                            handleAddRow()
-                            setDialogAdd(false)
-                        }}>
+                        <Button
+                            sx={{
+                                color: "#fff",
+                                backgroundColor: "RGBA(152, 208, 70, 1)",
+                                "&:hover": {
+                                    backgroundColor: "RGBA(152, 208, 70, 0.8)"
+                                }
+                            }}
+                            variant="contianed" onClick={() => {
+                                handleAddRow()
+                                setDialogAdd(false)
+                            }}>
                             Añadir
                         </Button>
                     </div>
-                </DialogContent>
-            </Dialog >)
+                </Box>
+            </DialogComponent>
+        )
     }
     const renderDialogBuscarProducto = () => {
         return (
@@ -849,7 +875,7 @@ export default function PlaneacionPage(props) {
         setLineStatistics(true)
     }
     const handleKeyDown = (event) => {
-        
+
         let charCode = String.fromCharCode(event.which).toLowerCase();
         if ((event.ctrlKey || event.metaKey) && charCode === 'z') {
             client.send(JSON.stringify({
@@ -946,10 +972,42 @@ export default function PlaneacionPage(props) {
                                 </ListItem>
                             </List>
                         </SwipeableDrawer>
+
                         <DataGrid
                             aria-label="Marco"
                             initialState={
                                 {
+                                    columns: {
+                                        columnVisibilityModel: {
+                                            columnVisibilityModel:
+                                            {
+                                                id: Roles[rol].id.view,
+                                                actions: Roles[rol].actions.view,
+                                                date: Roles[rol].date.view,
+                                                customer: Roles[rol].customer.view,
+                                                product: Roles[rol].product.view,
+                                                po: Roles[rol].po.view,
+                                                poDescription: Roles[rol].poDescription.view,
+                                                dry_boxes: Roles[rol].dry_boxes.view,
+                                                pull_date: Roles[rol].pull_date.view,
+                                                wet_pack: Roles[rol].wet_pack.view,
+                                                comment: Roles[rol].comment.view,
+                                                priority: Roles[rol].priority.view,
+                                                wo: Roles[rol].wo.view,
+                                                exit_order: Roles[rol].exit_order.view,
+                                                line: Roles[rol].line.view,
+                                                turno: Roles[rol].turno.view,
+                                                assigned: Roles[rol].assigned.view,
+                                                made: Roles[rol].made.view,
+                                                order_status: Roles[rol].order_status.view,
+                                                scan_status: Roles[rol].scan_status.view,
+                                                box_code: Roles[rol].box_code.view,
+                                                hargoods: Roles[rol].hargoods.view,
+                                                hargoods_status: Roles[rol].hargoods_status.view,
+
+                                            }
+                                        }
+                                    },
                                     filter: {
                                         filterModel:
                                             (
@@ -973,33 +1031,6 @@ export default function PlaneacionPage(props) {
                                 }
                             }
 
-                            columnVisibilityModel={
-                                {
-                                    id: Roles[rol].id.view,
-                                    actions: Roles[rol].actions.view,
-                                    date: Roles[rol].date.view,
-                                    customer: Roles[rol].customer.view,
-                                    product: Roles[rol].product.view,
-                                    po: Roles[rol].po.view,
-                                    poDescription: Roles[rol].poDescription.view,
-                                    dry_boxes: Roles[rol].dry_boxes.view,
-                                    pull_date: Roles[rol].pull_date.view,
-                                    wet_pack: Roles[rol].wet_pack.view,
-                                    comment: Roles[rol].comment.view,
-                                    priority: Roles[rol].priority.view,
-                                    wo: Roles[rol].wo.view,
-                                    exit_order: Roles[rol].exit_order.view,
-                                    line: Roles[rol].line.view,
-                                    turno: Roles[rol].turno.view,
-                                    assigned: Roles[rol].assigned.view,
-                                    made: Roles[rol].made.view,
-                                    order_status: Roles[rol].order_status.view,
-                                    scan_status: Roles[rol].scan_status.view,
-                                    box_code: Roles[rol].box_code.view,
-                                    hargoods: Roles[rol].hargoods.view,
-                                    hargoods_status: Roles[rol].hargoods_status.view,
-                                }
-                            }
                             sx={styleDataGrid}
                             getRowHeight={() => 'auto'}
                             pageSize={100}
@@ -1071,6 +1102,20 @@ export default function PlaneacionPage(props) {
                             width: "max-content",
                             left: "84%",
                         }}>
+                            <Fab
+                                sx={{
+                                    backgroundColor: "#000",
+                                    '&:hover': {
+                                        backgroundColor: "rgba(0,0,0,0.6)"
+                                    }
+                                }}
+                                onClick={() => {
+                                    console.log(recipes)
+                                }}
+                            >
+                                aaa
+                            </Fab>
+
                             <Fab
                                 sx={{
                                     backgroundColor: "#000",

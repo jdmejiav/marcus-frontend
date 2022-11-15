@@ -18,7 +18,6 @@ export async function workOrdersFetch() {
     await fetch(`/production/GetProductionWorkOrders/BQC/${moment(today).format("YYYY-MM-DD")}/${moment(tumorrow).format("YYYY-MM-DD")}`, requestOptions)
         .then(async (res) => {
             const data = await res.json()
-            console.log(data)
             data.forEach(item => {
                 if (item.productionWorkOrderId in workOrders) {
                     workOrders[item.productionWorkOrderId].boxes = Number(workOrders[item.productionWorkOrderId].boxes) + Number(item.boxes)
@@ -32,8 +31,6 @@ export async function workOrdersFetch() {
                 }
             }
             )
-
-
         })
         .catch(error => console.log('error', error));
 

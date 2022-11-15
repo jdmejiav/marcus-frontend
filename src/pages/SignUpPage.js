@@ -17,7 +17,6 @@ export default function SignUpPage() {
             window.location.href = "/"
         }
     }, [])
-
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
     const [firstName, setFirstName] = useState("")

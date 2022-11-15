@@ -32,10 +32,10 @@ export const styleDataGrid = {
         color: "#00C244"
     },
     '& .pausada': {
-        backgroundColor: "#FF4a4a",
+        backgroundColor: "#FF5050",
     },
     '& .pausadaCell': {
-        backgroundColor: "#FF4a4a",
+        backgroundColor: "#FF4F4F",
         fontWeight: 900,
     },
     '& .orderStatusArmadoCell': {
