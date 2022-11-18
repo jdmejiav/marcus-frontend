@@ -24,9 +24,7 @@ export default function DialogComponent(props) {
                 width: "100vw",
             }
         }>
-
             {props.children}
-
         </div>
     )
 }

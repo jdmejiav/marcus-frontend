@@ -4,10 +4,7 @@ import Button from "@mui/material/Button";
 import Paleta from "../util/Pallete";
 
 export default function PlaneacionAlternator({ children }) {
-
     const [selected, setSelected] = useState(1)
-
-
     return (
         <div style={{ height: "100vh" }}>
 

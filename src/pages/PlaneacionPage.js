@@ -71,10 +71,7 @@ export default function PlaneacionPage(props) {
     })
     const [lineStatistics, setLineStatistics] = useState(false)
 
-    const [recipes, setRecipes] = useState(axios.get("http://localhost:8080/recipes").then(async (res) => {
-        const data = await res.data
-        return data
-    }))
+
     const [rows, setRows] = useState([])
     const [openSideBar, setOpenSideBar] = useState(false)
     const [tempItem, setTempItem] = useState()
@@ -83,17 +80,10 @@ export default function PlaneacionPage(props) {
     const [workOrders, setWorkOrders] = useState(undefined)
     // UseEffect definitions
     useEffect(() => {
-
         getItems()
         fetchWo()
-        getRecipes()
     }, [])
-    const getRecipes = async () => {
-        await axios.get("http://localhost:8080/recipes").then(async (res) => {
-            const data = await res.data
-            setRecipes(data)
-        })
-    }
+
     const fetchWo = async () => {
 
         setWorkOrders(await workOrdersFetch())
@@ -116,108 +106,63 @@ export default function PlaneacionPage(props) {
             console.log("WebScoket Client connected");
             fetchContent(day)
         }
-        client.onmessage = (message) => {
+        client.onmessage = async (message) => {
             const dataFromServer = JSON.parse(message.data);
             if (dataFromServer.day === props.day) {
-                if (dataFromServer["type"] === 'conn') {
-                    if (dataFromServer.data !== undefined) {
-                        setRows(dataFromServer.data)
-                    }
-                } else if (dataFromServer["type"] === 'update') {
-
-                    let row = dataFromServer["row"]
-                    let copy = [...rows]
-                    copy[row] = dataFromServer.data
-                    setRows(copy)
-                } else if (dataFromServer["type"] === 'add') {
-                    let copy = [...rows]
-                    if (dataFromServer["row"] >= rows.length) {
-                        copy.push(dataFromServer.data)
-                        setRows(copy)
-                    }
-                } else if (dataFromServer["type"] === 'delete') {
-                    console.log(dataFromServer["data"])
-                    setRows(dataFromServer["data"])
-                } else if (dataFromServer["type"] === 'newday') {
-                    setRows(dataFromServer.data)
-                } else if (dataFromServer["type"] === 'recoverHist') {
-                    console.log("Llega del recoverHist ", dataFromServer.data)
-                    setRows(dataFromServer.data)
+                if (dataFromServer.type === "update") {
+                    const rowsUpdated = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/getRows`).then(res => res.data)
+                    setRows(rowsUpdated)
                 }
             }
         }
     })
-    const fetchContent = (day) => {
-        client.send(JSON.stringify({
-            day: props.day,
-            type: "conn"
-        }))
+    const fetchContent = async (day) => {
+        const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/getRows`).then((res) => (res.data)).catch((err) => (console.log(err)));
+        console.log(data)
+        setRows(data)
     }
-    const handleOnRowChange = (e) => {
-        let copy = [...rows]
-        copy[e.id - 1][e.field] = e.value
+    const handleOnRowChange = async (e) => {
+        let rowPayload = {}
+        rowPayload[e.field] = e.value
+        let { _id } = e
+        let id = _id
+        if (_id === undefined) {
+            for (var i = 0; i < rows.length; i++) {
+                if (rows[i]["id"] === e.id)
+                    id = rows[i]["_id"]
+            }
+        }
+        console.log(id)
         if (e.field === "product") {
-            copy[e.id - 1]["po"] = []
-            copy[e.id - 1]["poDescription"] = {}
+            rowPayload["po"] = []
+            rowPayload["poDescription"] = {}
         } else
             if (e.field === "wo") {
                 if (workOrders[e.value] !== undefined) {
-                    copy[e.id - 1]["wet_pack"] = workOrders[e.value].boxes
-                    copy[e.id - 1]["box_code"] = workOrders[e.value].boxCode
+                    rowPayload["wet_pack"] = workOrders[e.value].boxes
+                    rowPayload["box_code"] = workOrders[e.value].boxCode
                 }
             }
-
-        setRows(copy)
-        console.log(rows)
+        await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/updateRow/${id}`, rowPayload)
+            .then((res) => res.data)
+            .catch(err => console.log(err))
         client.send(
             JSON.stringify({
                 day: props.day,
                 type: "update",
-                data: copy[e.id - 1],
-                row: e.id - 1
             })
         )
-    }
-    const updateDry = (row) => {
-        let copy = [...rows]
-        let cajas = rows[row].poDescription
-        let count = {}
-        Object.keys(cajas).map((key) => (
-            count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
-        ))
-        let qc = false
-        console.log(items[copy[row].product])
-        items[copy[row].product].poDetails.forEach(item => {
-            console.log(item)
-            if (item.reference.includes("QC")) {
-                Object.keys(copy[row].poDescription).forEach(po => {
-                    if (po.split(" ")[0] === item.po)
-                        qc = true
-                })
-            }
-        })
-        if (qc) {
-            const tempCommentSplit = copy[row].comment.split("|")
-            let tempComment = ""
-            if (!copy[row].comment.includes("Quality Check"))
-                if (tempCommentSplit.length > 1) {
-                    copy[row].comment = copy[row].comment + " Quality Check"
-                } else {
-                    tempComment = tempCommentSplit[0] + "| Quality Check"
-                    copy[row].comment = tempComment
-                }
-        } else {
-            copy[row].comment = copy[row].comment.replace("| Quality Check", '')
-        }
-
-        copy[row].dry_boxes = count
-        setRows(copy)
     }
     const columns = [
         {
             field: 'id', headerName: '#', width: 20,
             editable: Roles[rol].id.edit,
             hideable: Roles[rol].id.hideable
+        },
+        {
+            field: '_id', headerName: '_id', width: 0,
+            editable: false,
+            hideable: false
         },
         {
             width: 100, field: "actions", headerName: "Acciones", sortable: false,
@@ -229,7 +174,7 @@ export default function PlaneacionPage(props) {
                         <IconButton
                             disabled={!Roles[rol].actions.edit}
                             sx={{ color: "inherit" }} onClick={(e) => {
-                                sendDeleteItem(params.row.id)
+                                sendDeleteItem(params.row._id)
                             }
                             }>
                             <DeleteRoundedIcon style={{ color: "inherit" }} ></DeleteRoundedIcon>
@@ -266,57 +211,83 @@ export default function PlaneacionPage(props) {
             editable: false,
             hideable: Roles[rol].po.hideable,
             renderCell: (params) => {
-                const [pos, setPos] = useState(rows[params.row.id - 1] === undefined ? [] : rows[params.row.id - 1].po)
+                const [pos, setPos] = useState(params.row === undefined ? [] : params.row.po)
                 useEffect(() => {
-                    setPos(rows[params.row.id - 1] === undefined ? [] : rows[params.row.id - 1].po)
+                    setPos(params.row === undefined ? [] : params.row.po)
                 }, [rows])
-                const handleChange = (event) => {
+                const handleChange = async (event) => {
+                    let id = params.row._id
                     const {
                         target: { value },
                     } = event;
-                    let copy = rows
-                    /*
-                    setPos(
-                        // On autofill we get a stringified value.
-                        typeof value === 'string' ? value.splvalue.split(',') : value
-                    );
-                    */
+                    let rowPayload = params.row
                     // Add items that are on POs Columns but not in te PO Details (When adding items)
-                    let copyPoDetails = copy[params.row.id - 1].poDescription;
+                    let copyPoDetails = rowPayload.poDescription;
                     for (var key of (typeof value === 'string' ? value.splvalue.split(',') : value)) {
-                        if (!Object.keys(copy[params.row.id - 1].poDescription).includes(key)) {
+                        if (!Object.keys(rowPayload.poDescription).includes(key)) {
                             copyPoDetails[key] = 0
                         }
                     }
                     // Remove elements that are not on the POs Column but are on PO Details Column (when deleting items)
                     let finalCopy = Object.fromEntries(value.map((key) => [key, copyPoDetails[key]]))
-                    copy[params.row.id - 1].po = value
-                    copy[params.row.id - 1].poDescription = finalCopy
-                    //setRows(copy)
-                    updateDry(params.row.id - 1)
-                    let tempComment = ""
-                    Object.keys(copy[params.row.id - 1].poDescription).forEach((item) => {
-                        tempComment = tempComment + item.split(" ")[0] + " " + copy[params.row.id - 1].poDescription[item] + item.charAt(item.length - 1) + "  "
+                    rowPayload.po = value
+                    rowPayload.poDescription = finalCopy
+
+                    let cajas = rowPayload.poDescription
+                    let count = {}
+                    Object.keys(cajas).map((key) => (
+                        count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
+                    ))
+                    let qc = false
+
+                    items[rowPayload.product].poDetails.forEach(item => {
+
+                        if (item.reference.includes("QC")) {
+                            Object.keys(rowPayload.poDescription).forEach(po => {
+                                if (po.split(" ")[0] === item.po)
+                                    qc = true
+                            })
+                        }
                     })
-                    const tempCommentSplit = copy[params.row.id - 1].comment.split("|")
+                    if (qc) {
+                        const tempCommentSplit = rowPayload.comment.split("|")
+                        let tempComment = ""
+                        if (!rowPayload.comment.includes("Quality Check"))
+                            if (tempCommentSplit.length > 1) {
+                                rowPayload.comment = rowPayload.comment + " Quality Check"
+                            } else {
+                                tempComment = tempCommentSplit[0] + "| Quality Check"
+                                rowPayload.comment = tempComment
+                            }
+                    } else {
+                        rowPayload.comment = rowPayload.comment.replace("| Quality Check", '')
+                    }
+                    console.log("dry_boxes: ", count)
+                    rowPayload.dry_boxes = count
+
+                    let tempComment = ""
+                    Object.keys(rowPayload.poDescription).forEach((item) => {
+                        tempComment = tempComment + item.split(" ")[0] + " " + rowPayload.poDescription[item] + item.charAt(item.length - 1) + "  "
+                    })
+                    const tempCommentSplit = rowPayload.comment.split("|")
 
                     if (tempCommentSplit.length > 1) {
                         let tempCommentFinal = ""
                         for (var i = 1; i < tempCommentSplit.length; i = i + 1) {
                             tempCommentFinal = tempCommentFinal + tempCommentSplit[i]
                         }
-                        copy[params.row.id - 1].comment = tempComment + " | " + tempCommentFinal
+                        rowPayload.comment = tempComment + " | " + tempCommentFinal
                     } else {
-                        copy[params.row.id - 1].comment = tempComment
+                        rowPayload.comment = tempComment
                     }
 
-
+                    await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/updateRow/${id}`, rowPayload)
+                        .then((res) => res.data)
+                        .catch(err => console.log(err))
                     client.send(
                         JSON.stringify({
                             day: props.day,
                             type: "update",
-                            data: copy[params.row.id - 1],
-                            row: params.row.id - 1
                         })
                     )
                 };
@@ -366,7 +337,7 @@ export default function PlaneacionPage(props) {
             hideable: Roles[rol].poDescription.hideable,
             renderCell: (params) => {
                 return (
-                    rows[params.row.id - 1] === undefined ? <></> :
+                    params.row === undefined ? <></> :
                         <List disablePadding
                             sx={{
                                 '& .MuiMenuItem-root ': {
@@ -374,51 +345,94 @@ export default function PlaneacionPage(props) {
                                 },
                             }}>
                             {
-                                Object.keys(rows[params.row.id - 1].poDescription).map((key, idx) => {
+                                Object.keys(params.row.poDescription).map((key, idx) => {
                                     const handleOnPONumberChange = (e) => {
                                         let copy = [...rows]
                                         const boxesTemp = key.split(" ");
                                         let maxBoxes = + Number.parseInt(boxesTemp[boxesTemp.length - 1].substring(0, boxesTemp[boxesTemp.length - 1].length - 1))
                                         if ((Number.parseInt(e.target.value) <= Number.parseInt(maxBoxes) && Number.parseInt(e.target.value) >= 0) || e.target.value === '') {
-                                            copy[params.row.id - 1].poDescription[key] = (e.target.value === '' ? 0 : Number.parseInt(e.target.value))
+                                            params.row.poDescription[key] = (e.target.value === '' ? 0 : Number.parseInt(e.target.value))
                                         }
                                         let tempComment = ""
-                                        Object.keys(copy[params.row.id - 1].poDescription).forEach((item) => {
-                                            tempComment = tempComment + item.split(" ")[0] + " " + copy[params.row.id - 1].poDescription[item] + item.charAt(item.length - 1) + "  "
+                                        Object.keys(params.row.poDescription).forEach((item) => {
+                                            tempComment = tempComment + item.split(" ")[0] + " " + params.row.poDescription[item] + item.charAt(item.length - 1) + "  "
                                         })
-                                        const tempCommentSplit = copy[params.row.id - 1].comment.split("|")
+                                        const tempCommentSplit = params.row.comment.split("|")
 
                                         if (tempCommentSplit.length > 1) {
                                             let tempCommentFinal = ""
                                             for (var i = 1; i < tempCommentSplit.length; i = i + 1) {
                                                 tempCommentFinal = tempCommentFinal + tempCommentSplit[i]
                                             }
-                                            copy[params.row.id - 1].comment = tempComment + " |" + tempCommentFinal
+                                            params.row.comment = tempComment + " |" + tempCommentFinal
                                         } else {
-                                            copy[params.row.id - 1].comment = tempComment
+                                            params.row.comment = tempComment
                                         }
-
                                         setRows(copy)
-                                        updateDry(params.row.id - 1)
+                                        let cajas = params.row.poDescription
+                                        let count = {}
+                                        Object.keys(cajas).map((key) => (
+                                            count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
+                                        ))
+                                        let qc = false
+                                        console.log(items[params.row.product])
+                                        items[params.row.product].poDetails.forEach(item => {
+                                            console.log(item)
+                                            if (item.reference.includes("QC")) {
+                                                Object.keys(params.row.poDescription).forEach(po => {
+                                                    if (po.split(" ")[0] === item.po)
+                                                        qc = true
+                                                })
+                                            }
+                                        })
+                                        if (qc) {
+                                            const tempCommentSplit = params.row.comment.split("|")
+                                            let tempComment = ""
+                                            if (!params.row.comment.includes("Quality Check"))
+                                                if (tempCommentSplit.length > 1) {
+                                                    params.row.comment = params.row.comment + " Quality Check"
+                                                } else {
+                                                    tempComment = tempCommentSplit[0] + "| Quality Check"
+                                                    params.row.comment = tempComment
+                                                }
+                                        } else {
+                                            params.row.comment = params.row.comment.replace("| Quality Check", '')
+                                        }
+                                        params.row.dry_boxes = count
                                     }
-                                    const updateRow = (e) => {
-                                        let copy = [...rows]
+                                    const updateRow = async (e) => {
+                                        console.log("updatee")
+                                        await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/updateRow/${params.row._id}`, params.row)
+                                            .then(res => res.data)
+                                            .catch(err => console.log(err))
                                         client.send(
                                             JSON.stringify({
                                                 day: props.day,
                                                 type: "update",
-                                                data: copy[params.row.id - 1],
-                                                row: params.row.id - 1
                                             })
                                         )
+
                                     }
                                     return (
                                         <MenuItem key={idx}>
-                                            <input min="0" disabled={!Roles[rol].poDescription.edit} placeholer={key.split("")} style={{ padding: "10px 0px 10px 5px", margin: "2px 0px", border: "1px solid", borderColor: "rgba(60,60,60,0.5)", borderRadius: "5px", width: "100%", backgroundColor: "inherit" }} sx={{
-                                                '& .MuiOutlinedInput-input': {
-                                                    padding: "10px 0px 10px 5px"
-                                                }, p: 0, m: 0
-                                            }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={Number.parseInt(rows[params.row.id - 1].poDescription[key])} />
+                                            <input
+
+                                                min="0"
+                                                disabled={!Roles[rol].poDescription.edit}
+                                                placeholer={key.split("")}
+                                                style={{
+                                                    padding: "10px 0px 10px 5px",
+                                                    margin: "2px 0px",
+                                                    border: "1px solid",
+                                                    borderColor: "rgba(60,60,60,0.5)",
+                                                    borderRadius: "5px", width: "100%",
+                                                    backgroundColor: "inherit"
+                                                }}
+                                                sx={{
+                                                    '& .MuiOutlinedInput-input': {
+                                                        padding: "10px 0px 10px 5px"
+                                                    }, p: 0, m: 0
+                                                }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={Number.parseInt(params.row.poDescription[key])} />
                                         </MenuItem>
                                     )
                                 })}
@@ -433,12 +447,13 @@ export default function PlaneacionPage(props) {
             renderCell: (params) => (
                 <List>
                     {
-                        rows[params.row.id - 1] === undefined ?
+                        params.row.dry_boxes === undefined ?
                             <></> :
-                            Object.keys(rows[params.row.id - 1].dry_boxes).map((key) => (<Typography key={key}>{rows[params.row.id - 1].dry_boxes[key]}{key}</Typography>))
+                            Object.keys(params.row.dry_boxes).map((key) => (<Typography key={key}>{params.row.dry_boxes[key]}{key}</Typography>))
                     }
                 </List>
             )
+
         },
         {
             width: 110, field: "pull_date", headerName: "Pull Date",
@@ -525,146 +540,56 @@ export default function PlaneacionPage(props) {
         },
     ]
     const getItems = async () => {
-        const myHeaders = new Headers();
-        myHeaders.append("Cache-Control", "no-cache");
-        myHeaders.append("Ocp-Apim-Subscription-Key", process.env.REACT_APP_API_KEY);
-        myHeaders.append("Access-Control-Allow-Origin", "*");
-        const requestOptions = {
-            method: 'GET',
-            headers: myHeaders,
-            redirect: 'follow'
-        };
-        await fetch("/Inventory/GetProductInventoryHistory/BQC/0", requestOptions)
-            .then(async (res) => {
-
-                const data = await res.json()
-                const customers = {}
-                const products = {}
-                data.forEach((val) => {
-                    if (!(val.customer in customers)) {
-                        customers[val.customer] = "1"
-                    }
-                    if (val.name in products) {
-                        const arrTemp = products[val.name].poDetails;
-                        arrTemp.push({
-                            po: val.poId,
-                            age: val.age,
-                            numBoxes: val.boxes,
-                            boxType: val.boxCode.replace(/\s/g, ''),
-                            customer: val.customer,
-                            reference: val.reference
-                        })
-                        products[val.name] = {
-                            poDetails: arrTemp,
-                            numBoxes: Number.parseInt(products[val.name].numBoxes) + Number.parseInt(val.boxes)
-                        }
-                    } else {
-                        products[val.name] = {
-                            poDetails: Array({
-                                po: val.poId,
-                                age: val.age,
-                                numBoxes: Number.parseInt(val.boxes),
-                                boxType: val.boxCode.replace(/\s/g, ''),
-                                customer: val.customer,
-                                reference: val.reference
-                            }),
-                            name: val.name,
-                            numBoxes: val.boxes
-                        }
-                    }
-                })
-                let begin = new Date()
-                let end = new Date()
-                end.setDate(end.getDate() + 1)
-                await fetch("/Procurement/GetPurchaseProducts/BQC/All/?" + new URLSearchParams({
-                    dateFrom: moment(begin).format("YYYY-MM-DD"),
-                    dateTo: moment(end).format("YYYY-MM-DD")
-                }), requestOptions).then(async (res) => {
-                    const data = await res.json()
-                    data.forEach((val) => {
-                        if (val.dateReceived === null) {
-                            if (!(val.customer in customers)) {
-                                customers[val.customer] = "1"
-                            }
-                            if (val.productName in products) {
-                                const arrTemp = products[val.productName].poDetails;
-                                arrTemp.push({
-                                    po: val.poNumber,
-                                    age: "N.R",
-                                    numBoxes: val.pack,
-                                    boxType: val.boxCode.replace(/\s/g, ''),
-                                    customer: val.customer,
-                                    reference: val.reference
-                                })
-                                products[val.productName] = {
-                                    poDetails: arrTemp,
-                                    numBoxes: Number.parseInt(products[val.productName].numBoxes) + Number.parseInt(val.pack)
-                                }
-                            } else {
-                                products[val.productName] = {
-                                    poDetails: Array({
-                                        po: val.poNumber,
-                                        age: "N.R",
-                                        numBoxes: Number.parseInt(val.pack),
-                                        boxType: val.boxCode.replace(/\s/g, ''),
-                                        customer: val.customer,
-                                        reference: val.reference
-                                    }),
-                                    name: val.productName,
-                                    numBoxes: val.pack
-                                }
-                            }
-                        }
-                    })
-                    setItems(products)
-                    setCustomers(Object.keys(customers))
-                }).catch(error => console.log('error', error));
-            })
-            .catch(error => console.log('error', error));
+        const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/fetchInventory`).then(res => res.data)
+        setItems(info.items)
+        setCustomers(info.customers)
+        return workOrders
     }
-    const sendDeleteItem = (row) => {
-        client.send(JSON.stringify({
-            day: props.day,
-            type: "delete",
-            row: row - 1,
-            data: rows
-        }))
+    const sendDeleteItem = async (_id) => {
+        await axios.delete(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/deleteRow/${_id}`).then(_ => {
+            client.send(JSON.stringify({
+                day: props.day,
+                type: "update",
+            }))
+        }).catch(err => console.log(err))
+
     }
     const renderDialogCrearRow = () => {
-        const handleAddRow = () => {
+        const handleAddRow = async () => {
             if (newProduct !== "") {
-                let copy = [...rows]
                 let row = {
                     id: rows.length === 0 ? 1 : rows[rows.length - 1].id + 1,
+                    actions: "",
                     date: new Date(),
                     customer: newCustomer,
                     product: newProduct,
                     po: [],
                     poDescription: {},
-                    dry_boxes: [],
+                    dry_boxes: {},
                     pull_date: "",
-                    wet_pack: "",
+                    //wet_pack: 0,
+                    comment: "",
+                    priority: "",
                     wo: "",
+                    //exit_order: null,
                     line: "",
                     turno: "Morning",
-                    priority: "",
                     assigned: "",
                     made: "",
                     order_status: "",
                     scan_status: "",
-                    comment: "",
+                    box_code: "",
                     hargoods: "",
                     hargoods_status: "Pendiente por entregar",
                 }
-                copy.push(row)
-                setRows(copy)
+                const data = await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/addRow`, row).then(res => res.data).catch(err => console.log(err));
+                //copy.push(data)
+                //setRows(copy)
                 client.send(
                     JSON.stringify({
                         day: props.day,
                         type: "add",
-                        data: row,
-                        dataRows: rows,
-                        row: rows.length === 0 ? 0 : rows[rows.length - 1].id
+                        _id: data._id,
                     })
                 )
             }
@@ -975,13 +900,16 @@ export default function PlaneacionPage(props) {
 
                         <DataGrid
                             aria-label="Marco"
+                            columnVisibilityModel={{
+                                _id: false
+                            }}
                             initialState={
                                 {
                                     columns: {
                                         columnVisibilityModel: {
-                                            columnVisibilityModel:
-                                            {
+                                            columnVisibilityModel: {
                                                 id: Roles[rol].id.view,
+                                                _id: false,
                                                 actions: Roles[rol].actions.view,
                                                 date: Roles[rol].date.view,
                                                 customer: Roles[rol].customer.view,
@@ -1004,33 +932,28 @@ export default function PlaneacionPage(props) {
                                                 box_code: Roles[rol].box_code.view,
                                                 hargoods: Roles[rol].hargoods.view,
                                                 hargoods_status: Roles[rol].hargoods_status.view,
-
                                             }
                                         }
                                     },
                                     filter: {
-                                        filterModel:
-                                            (
-                                                rol in RolesLineas ? {
-                                                    items: [
-                                                        {
-                                                            columnField: "line",
-                                                            operatorValue: "is",
-                                                            value: rol
-                                                        }
-                                                    ]
-                                                } :
+                                        filterModel: (
+                                            rol in RolesLineas ? {
+                                                items: [
                                                     {
-                                                        items: [
-                                                            {}
-                                                        ]
+                                                        columnField: "line",
+                                                        operatorValue: "is",
+                                                        value: rol
                                                     }
-                                            )
-
+                                                ]
+                                            } : {
+                                                items: [
+                                                    {}
+                                                ]
+                                            }
+                                        )
                                     }
                                 }
                             }
-
                             sx={styleDataGrid}
                             getRowHeight={() => 'auto'}
                             pageSize={100}
@@ -1059,6 +982,7 @@ export default function PlaneacionPage(props) {
                                         break;
                                     case "priority":
                                         if (params.row.priority === "Prioridad 1") {
+                                            console.log("ENTRAAAAAA")
                                             return 'prioridad1Cell'
                                         } else if (params.value === "Prioridad 2") {
                                             return 'prioridad2Cell'
@@ -1102,20 +1026,6 @@ export default function PlaneacionPage(props) {
                             width: "max-content",
                             left: "84%",
                         }}>
-                            <Fab
-                                sx={{
-                                    backgroundColor: "#000",
-                                    '&:hover': {
-                                        backgroundColor: "rgba(0,0,0,0.6)"
-                                    }
-                                }}
-                                onClick={() => {
-                                    console.log(recipes)
-                                }}
-                            >
-                                aaa
-                            </Fab>
-
                             <Fab
                                 sx={{
                                     backgroundColor: "#000",

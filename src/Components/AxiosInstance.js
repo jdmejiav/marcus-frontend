@@ -1,16 +1,15 @@
 
 import axios from 'axios';
 
-const baseURL = 'http://localhost:8080';
+const baseURL = 'http://20.7.2.215:8080/';
+
 
 const AxiosInstance = axios.create({
-	baseURL: baseURL,
-	headers: {
-		'Content-Type': 'application/json',
-		accept: 'application/json',
-		'Access-Control-Allow-Origin': "*",
-        "Access-Control-Allow-Private-Network": true
-	},
-});
+    baseURL: baseURL,
+    headers: {
+        "Access-Control-Allow-Origin": "*"
+    }
+})
+
 
 export default AxiosInstance;

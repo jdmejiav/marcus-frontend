@@ -2,7 +2,6 @@
   "name": "planeacionclient",
   "version": "0.1.0",
   "private": true,
-  "proxy": "https://webflowers.azure-api.net",
   "dependencies": {
     "@emotion/react": "^11.10.4",
     "@emotion/styled": "^11.10.4",
@@ -14,7 +13,6 @@
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^0.27.2",
-    "choices.js": "^10.1.0",
     "moment": "^2.29.4",
     "momento": "^0.2.0",
     "react": "^18.2.0",
