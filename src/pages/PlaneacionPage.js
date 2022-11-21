@@ -12,7 +12,6 @@ import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import Autocomplete from "@mui/material/Autocomplete";
-import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import FormControl from '@mui/material/FormControl';
@@ -53,9 +52,7 @@ export default function PlaneacionPage(props) {
     const [dialogBuscar, setDialogBuscar] = useState(false)
     const [day, setDay] = useState(props.day)
     const [rol, setRol] = useState("default")
-
     const [items, setItems] = useState(undefined)
-
     const [newCustomer, setNewCustomer] = useState("")
     const [newProduct, setNewProduct] = useState("")
 
@@ -91,11 +88,9 @@ export default function PlaneacionPage(props) {
     useEffect(() => {
         setRol(localStorage.getItem("rol") === null ? "default" : localStorage.getItem("rol"))
         if (client.readyState === 1) {
-
             setDay(props.day)
             fetchContent(props.day)
         }
-
     }, [props.day])
 
     useEffect(() => {
@@ -126,32 +121,54 @@ export default function PlaneacionPage(props) {
         rowPayload[e.field] = e.value
         let { _id } = e
         let id = _id
+        let actualDate = new Date()
         if (_id === undefined) {
             for (var i = 0; i < rows.length; i++) {
-                if (rows[i]["id"] === e.id)
+                if (rows[i]["id"] === e.id) {
                     id = rows[i]["_id"]
+                    actualDate = rows[i]["date"]
+                    break
+                }
             }
         }
-        console.log(id)
         if (e.field === "product") {
             rowPayload["po"] = []
             rowPayload["poDescription"] = {}
-        } else
+        } else {
             if (e.field === "wo") {
                 if (workOrders[e.value] !== undefined) {
                     rowPayload["wet_pack"] = workOrders[e.value].boxes
                     rowPayload["box_code"] = workOrders[e.value].boxCode
                 }
             }
-        await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/updateRow/${id}`, rowPayload)
-            .then((res) => res.data)
-            .catch(err => console.log(err))
-        client.send(
-            JSON.stringify({
-                day: props.day,
-                type: "update",
-            })
-        )
+        }
+        if (e.field === "date" && props.day === "sameday" && new Date(actualDate) < e.value) {
+            await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/moveDay`, { id: id, date: e.value })
+                .then((res) => res.data)
+                .catch(err => console.log(err))
+            client.send(
+                JSON.stringify({
+                    day: "sameday",
+                    type: "update",
+                })
+            )
+            client.send(
+                JSON.stringify({
+                    day: "nextday",
+                    type: "update",
+                })
+            )
+        } else {
+            await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/updateRow/${id}`, rowPayload)
+                .then((res) => res.data)
+                .catch(err => console.log(err))
+            client.send(
+                JSON.stringify({
+                    day: props.day,
+                    type: "update",
+                })
+            )
+        }
     }
     const columns = [
         {
@@ -728,25 +745,30 @@ export default function PlaneacionPage(props) {
         </Dialog>
         )
     }
-    const handleOnExport = () => {
+    const handleOnExport = async (referenceDay) => {
+        const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${referenceDay}/getRows`)
+            .then(res => res.data)
+            .catch(err => console.log(err))
+
         let objectMaxLength = Array(21).fill(10)
-        let bodyTemp = rows.map(item => {
+        let bodyTemp = data.map(item => {
             const tempRetorno = JSON.parse(JSON.stringify(item))
             let tempPo = ""
+            console.log(item.po)
             for (var i = 0; i < item.po.length; i++) {
                 tempPo = tempPo + item.po[i].split(" ")[0] + " " + item.poDescription[Object.keys(item.poDescription)[i]] + item.po[i].charAt(item.po[i].length - 1) + "    "
             }
+            delete tempRetorno["_id"]
+            delete tempRetorno["actions"]
             tempRetorno["po"] = tempPo
             let temp_dry = ""
+            //tempRetorno["date"] = moment(tempRetorno["date"]).format("L")
             Object.keys(item.dry_boxes).forEach((key) => {
                 temp_dry = temp_dry + item.dry_boxes[key] + key + " "
             })
             tempRetorno["dry_boxes"] = temp_dry
             delete tempRetorno["poDescription"]
             for (var j = 0; j < Object.keys(tempRetorno).length; j++) {
-                if (Object.keys(tempRetorno)[j] === "po") {
-                    console.log(Object.keys(tempRetorno)[j].length)
-                }
                 if (objectMaxLength[j] < tempRetorno[Object.keys(tempRetorno)[j]].length) {
                     objectMaxLength[j] = tempRetorno[Object.keys(tempRetorno)[j]].length
                 }
@@ -754,13 +776,13 @@ export default function PlaneacionPage(props) {
             return tempRetorno
         })
         var wsCols = objectMaxLength.map(val => ({
-            width: val
+            width: val + 2
         }))
         const ws = utils.json_to_sheet(bodyTemp)
         ws["!cols"] = wsCols;
         const wb = utils.book_new()
-        utils.book_append_sheet(wb, ws, (props.day));
-        writeFileXLSX(wb, "Program " + props.day + " " + (new Date()).toLocaleDateString() + ".xlsx")
+        utils.book_append_sheet(wb, ws, (referenceDay));
+        writeFileXLSX(wb, "Program " + referenceDay + " " + (new Date()).toLocaleDateString() + ".xlsx")
     }
     const handleOpenSideBar = () => {
         setOpenSideBar(true)
@@ -777,9 +799,6 @@ export default function PlaneacionPage(props) {
         setOpenSideBar(open);
     };
     const handleLineStatistics = () => {
-        console.log(columns.map(c =>
-            c.field
-        ))
         const tempLineProdcution = {
             "LINE 1": 0,
             "LINE 2": 0,
@@ -812,274 +831,234 @@ export default function PlaneacionPage(props) {
     }
     return (
         <div onKeyDown={handleKeyDown} style={{ overflowY: "hidden" }}>
-            {items !== undefined && workOrders !== undefined ?
-                <>
-                    {renderDialogProuctividadLineas()}
-                    {renderDialogBuscarProducto()}
-                    {renderDialogCrearRow()}
-                    <Box sx={{
-                        height: "95vh",
-                        width: '100%',
-                    }}>
-                        <SwipeableDrawer
-                            open={openSideBar}
-                            anchor="bottom"
-                            onClose={toggleDrawer("bottom", false)}
-                            onOpen={toggleDrawer("bottom", true)}
-                        >
-                            <List>
-
-                                <ListItem sx={{
-                                    display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
-                                }}>
-                                    <ListItemButton
-
-                                        onClick={() => {
-                                            let objectMaxLength = Array(21).fill(10)
-                                            let bodyTemp = rows.map(item => {
-                                                const tempRetorno = JSON.parse(JSON.stringify(item))
-                                                let tempPo = ""
-                                                for (var i = 0; i < item.po.length; i++) {
-                                                    tempPo = tempPo + item.po[i].split(" ")[0] + " " + item.poDescription[Object.keys(item.poDescription)[i]] + item.po[i].charAt(item.po[i].length - 1) + "    "
-                                                }
-                                                tempRetorno["po"] = tempPo
-                                                let temp_dry = ""
-                                                Object.keys(item.dry_boxes).forEach((key) => {
-                                                    temp_dry = temp_dry + item.dry_boxes[key] + key + " "
-                                                })
-                                                tempRetorno["dry_boxes"] = temp_dry
-                                                delete tempRetorno["poDescription"]
-                                                for (var j = 0; j < Object.keys(tempRetorno).length; j++) {
-                                                    if (Object.keys(tempRetorno)[j] === "po") {
-                                                        console.log(Object.keys(tempRetorno)[j].length)
-                                                    }
-                                                    if (objectMaxLength[j] < tempRetorno[Object.keys(tempRetorno)[j]].length) {
-                                                        objectMaxLength[j] = tempRetorno[Object.keys(tempRetorno)[j]].length
-                                                    }
-                                                }
-                                                return tempRetorno
+            <>
+                {renderDialogProuctividadLineas()}
+                {renderDialogBuscarProducto()}
+                {renderDialogCrearRow()}
+                <Box sx={{
+                    height: "95vh",
+                    width: '100%',
+                }}>
+                    <SwipeableDrawer
+                        open={openSideBar}
+                        anchor="bottom"
+                        onClose={toggleDrawer("bottom", false)}
+                        onOpen={toggleDrawer("bottom", true)}
+                    >
+                        <List>
+                            <ListItem sx={{
+                                display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
+                            }}>
+                                <ListItemButton
+                                    onClick={() => {
+                                        handleOnExport("sameday")
+                                        client.send(
+                                            JSON.stringify({
+                                                day: props.day,
+                                                type: "newday",
                                             })
-                                            var wsCols = objectMaxLength.map(val => ({
-                                                width: val
-                                            }))
-                                            const ws = utils.json_to_sheet(bodyTemp)
-                                            ws["!cols"] = wsCols;
-                                            const wb = utils.book_new()
-                                            utils.book_append_sheet(wb, ws, ("sameday"));
-                                            writeFileXLSX(wb, "Program " + (new Date()).toLocaleDateString() + ".xlsx")
-                                            client.send(
-                                                JSON.stringify({
-                                                    day: props.day,
-                                                    type: "newday",
-                                                })
-                                            )
-
-
-                                        }}>
-                                        <ListItemIcon>
-                                            <KeyboardTabRoundedIcon />
-                                        </ListItemIcon>
-                                        <ListItemText>Cambio de día</ListItemText>
-                                    </ListItemButton>
-                                </ListItem>
-                                <Divider />
-                                <ListItem>
-                                    <ListItemButton
-                                        onClick={() => {
-                                            localStorage.clear()
-                                            window.location.href = "/login"
-                                        }}>
-                                        <ListItemIcon>
-                                            <LogoutRoundedIcon />
-                                        </ListItemIcon>
-                                        <ListItemText>Cerrar Sesión</ListItemText>
-                                    </ListItemButton>
-                                </ListItem>
-                            </List>
-                        </SwipeableDrawer>
-
-                        <DataGrid
-                            aria-label="Marco"
-                            columnVisibilityModel={{
-                                _id: false
-                            }}
-                            initialState={
-                                {
-                                    columns: {
-                                        columnVisibilityModel: {
-                                            columnVisibilityModel: {
-                                                id: Roles[rol].id.view,
-                                                _id: false,
-                                                actions: Roles[rol].actions.view,
-                                                date: Roles[rol].date.view,
-                                                customer: Roles[rol].customer.view,
-                                                product: Roles[rol].product.view,
-                                                po: Roles[rol].po.view,
-                                                poDescription: Roles[rol].poDescription.view,
-                                                dry_boxes: Roles[rol].dry_boxes.view,
-                                                pull_date: Roles[rol].pull_date.view,
-                                                wet_pack: Roles[rol].wet_pack.view,
-                                                comment: Roles[rol].comment.view,
-                                                priority: Roles[rol].priority.view,
-                                                wo: Roles[rol].wo.view,
-                                                exit_order: Roles[rol].exit_order.view,
-                                                line: Roles[rol].line.view,
-                                                turno: Roles[rol].turno.view,
-                                                assigned: Roles[rol].assigned.view,
-                                                made: Roles[rol].made.view,
-                                                order_status: Roles[rol].order_status.view,
-                                                scan_status: Roles[rol].scan_status.view,
-                                                box_code: Roles[rol].box_code.view,
-                                                hargoods: Roles[rol].hargoods.view,
-                                                hargoods_status: Roles[rol].hargoods_status.view,
-                                            }
-                                        }
-                                    },
-                                    filter: {
-                                        filterModel: (
-                                            rol in RolesLineas ? {
-                                                items: [
-                                                    {
-                                                        columnField: "line",
-                                                        operatorValue: "is",
-                                                        value: rol
-                                                    }
-                                                ]
-                                            } : {
-                                                items: [
-                                                    {}
-                                                ]
-                                            }
                                         )
+                                    }}>
+                                    <ListItemIcon>
+                                        <KeyboardTabRoundedIcon />
+                                    </ListItemIcon>
+                                    <ListItemText>Cambio de día</ListItemText>
+                                </ListItemButton>
+                            </ListItem>
+                            <Divider />
+                            <ListItem>
+                                <ListItemButton
+                                    onClick={() => {
+                                        localStorage.clear()
+                                        window.location.href = "/login"
+                                    }}>
+                                    <ListItemIcon>
+                                        <LogoutRoundedIcon />
+                                    </ListItemIcon>
+                                    <ListItemText>Cerrar Sesión</ListItemText>
+                                </ListItemButton>
+                            </ListItem>
+                        </List>
+                    </SwipeableDrawer>
+                    <DataGrid
+                        aria-label="Marco"
+                        columnVisibilityModel={{
+                            _id: false
+                        }}
+                        loading={!(items !== undefined && workOrders !== undefined)}
+                        initialState={
+                            {
+                                columns: {
+                                    columnVisibilityModel: {
+                                        columnVisibilityModel: {
+                                            id: Roles[rol].id.view,
+                                            _id: false,
+                                            actions: Roles[rol].actions.view,
+                                            date: Roles[rol].date.view,
+                                            customer: Roles[rol].customer.view,
+                                            product: Roles[rol].product.view,
+                                            po: Roles[rol].po.view,
+                                            poDescription: Roles[rol].poDescription.view,
+                                            dry_boxes: Roles[rol].dry_boxes.view,
+                                            pull_date: Roles[rol].pull_date.view,
+                                            wet_pack: Roles[rol].wet_pack.view,
+                                            comment: Roles[rol].comment.view,
+                                            priority: Roles[rol].priority.view,
+                                            wo: Roles[rol].wo.view,
+                                            exit_order: Roles[rol].exit_order.view,
+                                            line: Roles[rol].line.view,
+                                            turno: Roles[rol].turno.view,
+                                            assigned: Roles[rol].assigned.view,
+                                            made: Roles[rol].made.view,
+                                            order_status: Roles[rol].order_status.view,
+                                            scan_status: Roles[rol].scan_status.view,
+                                            box_code: Roles[rol].box_code.view,
+                                            hargoods: Roles[rol].hargoods.view,
+                                            hargoods_status: Roles[rol].hargoods_status.view,
+                                        }
                                     }
+                                },
+                                filter: {
+                                    filterModel: (
+                                        rol in RolesLineas ? {
+                                            items: [
+                                                {
+                                                    columnField: "line",
+                                                    operatorValue: "is",
+                                                    value: rol
+                                                }
+                                            ]
+                                        } : {
+                                            items: [
+                                                {}
+                                            ]
+                                        }
+                                    )
                                 }
                             }
-                            sx={styleDataGrid}
-                            getRowHeight={() => 'auto'}
-                            pageSize={100}
-                            rowsPerPageOptions={[100]}
-                            disableSelectionOnClick
-                            onCellEditCommit={(e) => { handleOnRowChange(e) }}
-                            rows={rows}
-                            columns={columns}
-                            getCellClassName={(params) => {
-                                switch (params.field) {
-                                    case "order_status":
-                                        if (params.value === "ARMADO") {
-                                            return 'orderStatusArmadoCell'
-                                        } else if (params.value === "NO ARMADO") {
-                                            return 'orderStatusNoArmadoCell'
-                                        } else if (params.value === "EN PROCESO") {
-                                            return 'orderStatusEnProcesoCell';
-                                        }
-                                        break;
-                                    case "scan_status":
-                                        if (params.value === "ESCANEADO") {
-                                            return 'scanStatusEscaneadoCell'
-                                        } else if (params.value === "NO ESCANEADO") {
-                                            return 'scanStatusNoEscaneadoCell'
-                                        }
-                                        break;
-                                    case "priority":
-                                        if (params.row.priority === "Prioridad 1") {
-                                            console.log("ENTRAAAAAA")
-                                            return 'prioridad1Cell'
-                                        } else if (params.value === "Prioridad 2") {
-                                            return 'prioridad2Cell'
-                                        } else if (params.value === "Prioridad 3") {
-                                            return 'prioridad3Cell';
-                                        } else if (params.value === "Pausada") {
-                                            return 'pausadaCell';
-                                        }
-                                        break;
-                                    case "hargoods":
-                                        if (params.value === "Disponible") {
-                                            return 'hargoodsDisponibleCell'
-                                        } else if (params.value === "No en inventario") {
-                                            return 'hargoodsNoeninventarioCell'
-                                        }
-                                        break;
-                                    case "hargoods_status":
-                                        if (params.value === "Entregado") {
-                                            return 'hargoodsStatusEntregadoCell'
-                                        } else if (params.value === "Pendiente por entregar") {
-                                            return 'hargoodsStatusPendientePorEntregarCell'
-                                        }
-                                        break;
-                                    default:
-                                        break;
-                                }
-                                if (params.row.priority === "Prioridad 1") {
-                                    return "prioridad1"
-                                } else if (params.row.priority === "Pausada") {
-                                    return "pausada"
+                        }
+                        sx={styleDataGrid}
+                        getRowHeight={() => 'auto'}
+                        pageSize={100}
+                        rowsPerPageOptions={[100]}
+                        disableSelectionOnClick
+                        onCellEditCommit={(e) => { handleOnRowChange(e) }}
+                        rows={rows}
+                        columns={columns}
+                        getCellClassName={(params) => {
+                            switch (params.field) {
+                                case "order_status":
+                                    if (params.value === "ARMADO") {
+                                        return 'orderStatusArmadoCell'
+                                    } else if (params.value === "NO ARMADO") {
+                                        return 'orderStatusNoArmadoCell'
+                                    } else if (params.value === "EN PROCESO") {
+                                        return 'orderStatusEnProcesoCell';
+                                    }
+                                    break;
+                                case "scan_status":
+                                    if (params.value === "ESCANEADO") {
+                                        return 'scanStatusEscaneadoCell'
+                                    } else if (params.value === "NO ESCANEADO") {
+                                        return 'scanStatusNoEscaneadoCell'
+                                    }
+                                    break;
+                                case "priority":
+                                    if (params.row.priority === "Prioridad 1") {
+                                        return 'prioridad1Cell'
+                                    } else if (params.value === "Prioridad 2") {
+                                        return 'prioridad2Cell'
+                                    } else if (params.value === "Prioridad 3") {
+                                        return 'prioridad3Cell';
+                                    } else if (params.value === "Pausada") {
+                                        return 'pausadaCell';
+                                    }
+                                    break;
+                                case "hargoods":
+                                    if (params.value === "Disponible") {
+                                        return 'hargoodsDisponibleCell'
+                                    } else if (params.value === "No en inventario") {
+                                        return 'hargoodsNoeninventarioCell'
+                                    }
+                                    break;
+                                case "hargoods_status":
+                                    if (params.value === "Entregado") {
+                                        return 'hargoodsStatusEntregadoCell'
+                                    } else if (params.value === "Pendiente por entregar") {
+                                        return 'hargoodsStatusPendientePorEntregarCell'
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
+                            if (params.row.priority === "Prioridad 1") {
+                                return "prioridad1"
+                            } else if (params.row.priority === "Pausada") {
+                                return "pausada"
+                            }
+                        }}
+                    >
+                    </DataGrid>
+                    <div style={{
+                        display: (rol in RolesBotones ? "flex" : "none"),
+                        flexDirection: "row",
+                        gap: "1rem",
+                        position: "absolute",
+                        bottom: "6px",
+                        width: "max-content",
+                        left: "84%",
+                    }}>
+                        <Fab
+                            sx={{
+                                backgroundColor: "#000",
+                                '&:hover': {
+                                    backgroundColor: "rgba(0,0,0,0.6)"
                                 }
                             }}
+                            onClick={handleOpenSideBar}
                         >
-                        </DataGrid>
-                        <div style={{
-                            display: (rol in RolesBotones ? "flex" : "none"),
-                            flexDirection: "row",
-                            gap: "1rem",
-                            position: "absolute",
-                            bottom: "6px",
-                            width: "max-content",
-                            left: "84%",
-                        }}>
-                            <Fab
-                                sx={{
-                                    backgroundColor: "#000",
-                                    '&:hover': {
-                                        backgroundColor: "rgba(0,0,0,0.6)"
-                                    }
-                                }}
-                                onClick={handleOpenSideBar}
-                            >
-                                <SettingsRoundedIcon sx={{ color: "#fff" }} />
-                            </Fab>
-                            <Fab
-                                sx={{
-                                    backgroundColor: Paleta.amarillo,
-                                    '&:hover': {
-                                        backgroundColor: Paleta.amarilloHover
-                                    }
-                                }}
-                                onClick={handleLineStatistics}
-                            >
-                                <QueryStatsRoundedIcon />
-                            </Fab>
-                            <Fab
-                                sx={{ backgroundColor: "#fff" }}
-                                onClick={handleOnExport}
-                            >
-                                <img
-                                    alt="Excel"
-                                    style={{
-                                        color: "#fff",
-                                        height: "30px",
-                                        width: "30px"
-                                    }}
-                                    src={Excel}></img>
-                            </Fab>
-                            <Fab
-                                sx={{ backgroundColor: Paleta.azulOscuro }}
+                            <SettingsRoundedIcon sx={{ color: "#fff" }} />
+                        </Fab>
+                        <Fab
+                            sx={{
+                                backgroundColor: Paleta.amarillo,
+                                '&:hover': {
+                                    backgroundColor: Paleta.amarilloHover
+                                }
+                            }}
+                            onClick={handleLineStatistics}
+                        >
+                            <QueryStatsRoundedIcon />
+                        </Fab>
+                        <Fab
+                            sx={{ backgroundColor: "#fff" }}
+                            onClick={() => {
+                                handleOnExport(props.day)
+                            }}
+                        >
+                            <img
+                                alt="Excel"
                                 style={{
-                                    marginRight: "1rem"
-                                }} onClick={() => {
-                                    setNewCustomer("")
-                                    setDialogAdd(true)
-                                }} color="primary" aria-label="add">
-                                <AddIcon />
-                            </Fab>
-                        </div>
+                                    color: "#fff",
+                                    height: "30px",
+                                    width: "30px"
+                                }}
+                                src={Excel}></img>
+                        </Fab>
+                        <Fab
+                            sx={{ backgroundColor: Paleta.azulOscuro }}
+                            style={{
+                                marginRight: "1rem"
+                            }} onClick={() => {
+                                setNewCustomer("")
+                                setDialogAdd(true)
+                            }} color="primary" aria-label="add">
+                            <AddIcon />
+                        </Fab>
+                    </div>
+                </Box>
+            </>
 
-                    </Box>
-                </>
-                :
-                <div style={{ display: "flex", flexDirection: "row", justifyContent: "center" }}>
-                    <CircularProgress />
-                </div>
-            }
 
         </div >
     )
