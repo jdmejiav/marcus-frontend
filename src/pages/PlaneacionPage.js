@@ -20,6 +20,7 @@ import { DataGrid } from "@mui/x-data-grid";
 import { w3cwebsocket as W3CWebSocket } from "websocket"
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 import moment from "moment";
 import Button from "@mui/material/Button";
 import Fab from '@mui/material/Fab';
@@ -41,6 +42,7 @@ import KeyboardTabRoundedIcon from '@mui/icons-material/KeyboardTabRounded';
 import { Divider } from "@mui/material";
 import DialogComponent from "../Components/DialogComponent";
 import axios from "axios";
+import BoxEquivalencies from "../util/BoxEquivalencies";
 
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
@@ -52,10 +54,13 @@ export default function PlaneacionPage(props) {
     const [dialogBuscar, setDialogBuscar] = useState(false)
     const [day, setDay] = useState(props.day)
     const [rol, setRol] = useState("default")
+    const [recipes, setRecipes] = useState(undefined)
     const [items, setItems] = useState(undefined)
     const [newCustomer, setNewCustomer] = useState("")
     const [newProduct, setNewProduct] = useState("")
-
+    const [dialogRecipe, setDialogRecipe] = useState(false)
+    const [dry, setDry] = useState(0)
+    const [wet, setWet] = useState(0)
     const [lineProduction, setLineProduction] = useState({
         "línea 1": 0,
         "línea 2": 0,
@@ -79,7 +84,14 @@ export default function PlaneacionPage(props) {
     useEffect(() => {
         getItems()
         fetchWo()
+        getRecipes()
     }, [])
+
+    const getRecipes = async () => {
+        const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/getRecipes`).then(res => res.data).catch(err => console.log(err))
+        console.log(data)
+        setRecipes(data)
+    }
 
     const fetchWo = async () => {
 
@@ -105,7 +117,9 @@ export default function PlaneacionPage(props) {
             const dataFromServer = JSON.parse(message.data);
             if (dataFromServer.day === props.day) {
                 if (dataFromServer.type === "update") {
+
                     const rowsUpdated = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/getRows`).then(res => res.data)
+                    console.log(rowsUpdated)
                     setRows(rowsUpdated)
                 }
             }
@@ -249,16 +263,13 @@ export default function PlaneacionPage(props) {
                     let finalCopy = Object.fromEntries(value.map((key) => [key, copyPoDetails[key]]))
                     rowPayload.po = value
                     rowPayload.poDescription = finalCopy
-
                     let cajas = rowPayload.poDescription
                     let count = {}
                     Object.keys(cajas).map((key) => (
                         count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
                     ))
                     let qc = false
-
                     items[rowPayload.product].poDetails.forEach(item => {
-
                         if (item.reference.includes("QC")) {
                             Object.keys(rowPayload.poDescription).forEach(po => {
                                 if (po.split(" ")[0] === item.po)
@@ -279,9 +290,7 @@ export default function PlaneacionPage(props) {
                     } else {
                         rowPayload.comment = rowPayload.comment.replace("| Quality Check", '')
                     }
-                    console.log("dry_boxes: ", count)
                     rowPayload.dry_boxes = count
-
                     let tempComment = ""
                     Object.keys(rowPayload.poDescription).forEach((item) => {
                         tempComment = tempComment + item.split(" ")[0] + " " + rowPayload.poDescription[item] + item.charAt(item.length - 1) + "  "
@@ -354,106 +363,117 @@ export default function PlaneacionPage(props) {
             hideable: Roles[rol].poDescription.hideable,
             renderCell: (params) => {
                 return (
-                    params.row === undefined ? <></> :
-                        <List disablePadding
-                            sx={{
-                                '& .MuiMenuItem-root ': {
-                                    padding: "0px"
-                                },
-                            }}>
-                            {
-                                Object.keys(params.row.poDescription).map((key, idx) => {
-                                    const handleOnPONumberChange = (e) => {
-                                        let copy = [...rows]
-                                        const boxesTemp = key.split(" ");
-                                        let maxBoxes = + Number.parseInt(boxesTemp[boxesTemp.length - 1].substring(0, boxesTemp[boxesTemp.length - 1].length - 1))
-                                        if ((Number.parseInt(e.target.value) <= Number.parseInt(maxBoxes) && Number.parseInt(e.target.value) >= 0) || e.target.value === '') {
-                                            params.row.poDescription[key] = (e.target.value === '' ? 0 : Number.parseInt(e.target.value))
-                                        }
-                                        let tempComment = ""
-                                        Object.keys(params.row.poDescription).forEach((item) => {
-                                            tempComment = tempComment + item.split(" ")[0] + " " + params.row.poDescription[item] + item.charAt(item.length - 1) + "  "
-                                        })
-                                        const tempCommentSplit = params.row.comment.split("|")
+                    (params.row === undefined ?
+                        <></> :
+                        (params.row.poDescription === undefined ? <></> :
+                            <List disablePadding
+                                sx={{
+                                    '& .MuiMenuItem-root ': {
+                                        padding: "0px"
+                                    },
+                                }}>
+                                {
 
-                                        if (tempCommentSplit.length > 1) {
-                                            let tempCommentFinal = ""
-                                            for (var i = 1; i < tempCommentSplit.length; i = i + 1) {
-                                                tempCommentFinal = tempCommentFinal + tempCommentSplit[i]
+                                    Object.keys(params.row.poDescription).map((key, idx) => {
+                                        const handleOnPONumberChange = (e) => {
+                                            let copy = [...rows]
+                                            const boxesTemp = key.split(" ");
+                                            let maxBoxes = + Number.parseInt(boxesTemp[boxesTemp.length - 1].substring(0, boxesTemp[boxesTemp.length - 1].length - 1))
+                                            if ((Number.parseInt(e.target.value) <= Number.parseInt(maxBoxes) && Number.parseInt(e.target.value) >= 0) || e.target.value === '') {
+                                                params.row.poDescription[key] = (e.target.value === '' ? 0 : Number.parseInt(e.target.value))
                                             }
-                                            params.row.comment = tempComment + " |" + tempCommentFinal
-                                        } else {
-                                            params.row.comment = tempComment
-                                        }
-                                        setRows(copy)
-                                        let cajas = params.row.poDescription
-                                        let count = {}
-                                        Object.keys(cajas).map((key) => (
-                                            count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
-                                        ))
-                                        let qc = false
-                                        console.log(items[params.row.product])
-                                        items[params.row.product].poDetails.forEach(item => {
-                                            console.log(item)
-                                            if (item.reference.includes("QC")) {
-                                                Object.keys(params.row.poDescription).forEach(po => {
-                                                    if (po.split(" ")[0] === item.po)
-                                                        qc = true
-                                                })
-                                            }
-                                        })
-                                        if (qc) {
-                                            const tempCommentSplit = params.row.comment.split("|")
                                             let tempComment = ""
-                                            if (!params.row.comment.includes("Quality Check"))
-                                                if (tempCommentSplit.length > 1) {
-                                                    params.row.comment = params.row.comment + " Quality Check"
-                                                } else {
-                                                    tempComment = tempCommentSplit[0] + "| Quality Check"
-                                                    params.row.comment = tempComment
-                                                }
-                                        } else {
-                                            params.row.comment = params.row.comment.replace("| Quality Check", '')
-                                        }
-                                        params.row.dry_boxes = count
-                                    }
-                                    const updateRow = async (e) => {
-                                        console.log("updatee")
-                                        await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/updateRow/${params.row._id}`, params.row)
-                                            .then(res => res.data)
-                                            .catch(err => console.log(err))
-                                        client.send(
-                                            JSON.stringify({
-                                                day: props.day,
-                                                type: "update",
+                                            Object.keys(params.row.poDescription).forEach((item) => {
+                                                tempComment = tempComment + item.split(" ")[0] + " " + params.row.poDescription[item] + item.charAt(item.length - 1) + "  "
                                             })
+                                            const tempCommentSplit = params.row.comment.split("|")
+
+                                            if (tempCommentSplit.length > 1) {
+                                                let tempCommentFinal = ""
+                                                for (var i = 1; i < tempCommentSplit.length; i = i + 1) {
+                                                    tempCommentFinal = tempCommentFinal + tempCommentSplit[i]
+                                                }
+                                                params.row.comment = tempComment + " |" + tempCommentFinal
+                                            } else {
+                                                params.row.comment = tempComment
+                                            }
+                                            setRows(copy)
+                                            let cajas = params.row.poDescription
+                                            let count = {}
+                                            Object.keys(cajas).map((key) => (
+                                                count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
+                                            ))
+                                            let qc = false
+                                            items[params.row.product].poDetails.forEach(item => {
+                                                if (item.reference.includes("QC")) {
+                                                    Object.keys(params.row.poDescription).forEach(po => {
+                                                        if (po.split(" ")[0] === item.po)
+                                                            qc = true
+                                                    })
+                                                }
+                                            })
+                                            if (qc) {
+                                                const tempCommentSplit = params.row.comment.split("|")
+                                                let tempComment = ""
+                                                if (!params.row.comment.includes("Quality Check"))
+                                                    if (tempCommentSplit.length > 1) {
+                                                        params.row.comment = params.row.comment + " Quality Check"
+                                                    } else {
+                                                        tempComment = tempCommentSplit[0] + "| Quality Check"
+                                                        params.row.comment = tempComment
+                                                    }
+                                            } else {
+                                                params.row.comment = params.row.comment.replace("| Quality Check", '')
+                                            }
+                                            params.row.dry_boxes = count
+                                            if (params.row.product in recipes) {
+                                                let tempWetPack = 0
+                                                let tempRecipe = recipes[params.row.product]
+                                                Object.keys(params.row.dry_boxes).forEach((boxCode) => {
+                                                    if (boxCode in BoxEquivalencies) {
+                                                        let fullEquivalent = params.row.dry_boxes[boxCode] / BoxEquivalencies[boxCode]
+                                                        tempWetPack = tempWetPack + ((fullEquivalent * tempRecipe.wp) / tempRecipe.dry)
+                                                    }
+                                                })
+                                                params.row.wet_pack = tempWetPack
+                                            }
+                                        }
+                                        const updateRow = async (e) => {
+                                            await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/updateRow/${params.row._id}`, params.row)
+                                                .then(res => res.data)
+                                                .catch(err => console.log(err))
+                                            client.send(
+                                                JSON.stringify({
+                                                    day: props.day,
+                                                    type: "update",
+                                                })
+                                            )
+                                        }
+                                        return (
+                                            <MenuItem key={idx}>
+                                                <input
+                                                    min="0"
+                                                    disabled={!Roles[rol].poDescription.edit}
+                                                    placeholer={key.split("")}
+                                                    style={{
+                                                        padding: "10px 0px 10px 5px",
+                                                        margin: "2px 0px",
+                                                        border: "1px solid",
+                                                        borderColor: "rgba(60,60,60,0.5)",
+                                                        borderRadius: "5px", width: "100%",
+                                                        backgroundColor: "inherit"
+                                                    }}
+                                                    sx={{
+                                                        '& .MuiOutlinedInput-input': {
+                                                            padding: "10px 0px 10px 5px"
+                                                        }, p: 0, m: 0
+                                                    }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={Number.parseInt(params.row.poDescription[key])} />
+                                            </MenuItem>
                                         )
-
-                                    }
-                                    return (
-                                        <MenuItem key={idx}>
-                                            <input
-
-                                                min="0"
-                                                disabled={!Roles[rol].poDescription.edit}
-                                                placeholer={key.split("")}
-                                                style={{
-                                                    padding: "10px 0px 10px 5px",
-                                                    margin: "2px 0px",
-                                                    border: "1px solid",
-                                                    borderColor: "rgba(60,60,60,0.5)",
-                                                    borderRadius: "5px", width: "100%",
-                                                    backgroundColor: "inherit"
-                                                }}
-                                                sx={{
-                                                    '& .MuiOutlinedInput-input': {
-                                                        padding: "10px 0px 10px 5px"
-                                                    }, p: 0, m: 0
-                                                }} type="number" onBlur={updateRow} onChange={handleOnPONumberChange} value={Number.parseInt(params.row.poDescription[key])} />
-                                        </MenuItem>
-                                    )
-                                })}
-                        </List>
+                                    })}
+                            </List>
+                        )
+                    )
                 )
             }
         },
@@ -470,7 +490,6 @@ export default function PlaneacionPage(props) {
                     }
                 </List>
             )
-
         },
         {
             width: 110, field: "pull_date", headerName: "Pull Date",
@@ -507,7 +526,6 @@ export default function PlaneacionPage(props) {
             editable: Roles[rol].line.edit,
             hideable: Roles[rol].line.hideable,
             valueOptions: (params) => {
-                console.log(params)
                 if (params.row !== undefined) {
                     return params.row.turno === "Morning" ? ["LINE 1", "LINE 2", "LINE 3", "LINE 4", "LINE 5", "Vase L1", "Vase L2", "LINE 10 (eComerce)", "Line Dry"] : ["LINE 6", "LINE 7", "LINE 8", "LINE 9", "LINE 11", "Vase L3", "Vase L4", "Linea 10 (eComerce)", "Line Dry"]
                 }
@@ -569,7 +587,6 @@ export default function PlaneacionPage(props) {
                 type: "update",
             }))
         }).catch(err => console.log(err))
-
     }
     const renderDialogCrearRow = () => {
         const handleAddRow = async () => {
@@ -600,15 +617,14 @@ export default function PlaneacionPage(props) {
                     hargoods_status: "Pendiente por entregar",
                 }
                 const data = await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/addRow`, row).then(res => res.data).catch(err => console.log(err));
-                //copy.push(data)
-                //setRows(copy)
                 client.send(
                     JSON.stringify({
                         day: props.day,
-                        type: "add",
+                        type: "update",
                         _id: data._id,
                     })
                 )
+
             }
         }
         return (
@@ -683,6 +699,55 @@ export default function PlaneacionPage(props) {
             </DialogComponent>
         )
     }
+
+
+    const renderDialogRecipe = () => {
+        return (
+            <DialogComponent visible={dialogRecipe}>
+                <Box style={{ backgroundColor: "#fff", padding: "2.5rem 2.5rem 1rem 2.5rem", borderRadius: "1rem", width: "50vw" }}>
+                    <Typography>Receta: {newProduct}</Typography>
+                    <Grid container spacing={4}>
+                        <Grid item xs={6}>
+                            <TextField onChange={(e) => { setWet(e.target.value) }} value={wet} fullWidth type="number" id="outlined-basic" label="Wet" variant="outlined" />
+                        </Grid>
+                        <Grid item xs={6}>
+                            <TextField onChange={(e) => { setDry(e.target.value) }} value={dry} fullWidth type="number" id="outlined-basic" label="Dry" variant="outlined" />
+                        </Grid>
+                    </Grid>
+                    <div style={{ marginTop: 10, display: "flex", flexDirection: "row", justifyContent: "center", alignContent: "center", gap: "2rem" }}>
+                        <Button variant="contianed" sx={{
+                            color: "#fff",
+                            backgroundColor: "RGBA(255, 0, 0, 1)",
+                            "&:hover": {
+                                backgroundColor: "RGBA(255,0,0,0.8)"
+                            }
+                        }} onClick={() => { setDialogRecipe(false) }}>
+                            Cerrar
+                        </Button>
+                        <Button
+                            sx={{
+                                color: "#fff",
+                                backgroundColor: "RGBA(152, 208, 70, 1)",
+                                "&:hover": {
+                                    backgroundColor: "RGBA(152, 208, 70, 0.8)"
+                                }
+                            }}
+                            variant="contianed"
+                            onClick={async () => {
+                                await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/addRecipe`, { product: newProduct, wp: wet, dry: dry })
+                                setDialogRecipe(false)
+                                setWet(0)
+                                setDry(0)
+                            }}>
+                            Añadir
+                        </Button>
+                    </div>
+                </Box>
+            </DialogComponent>
+        )
+    }
+
+
     const renderDialogBuscarProducto = () => {
         return (
             <Dialog open={dialogBuscar}>
@@ -691,7 +756,6 @@ export default function PlaneacionPage(props) {
                         (
                             items[tempItem] !== undefined ?
                                 <Grid item style={{ margin: 10, display: "flex", flexDirection: "row", overflow: "auto" }} xs={12}>
-
                                     <List>
                                         <ListItem key="nombre">
                                             <Typography>
@@ -754,7 +818,6 @@ export default function PlaneacionPage(props) {
         let bodyTemp = data.map(item => {
             const tempRetorno = JSON.parse(JSON.stringify(item))
             let tempPo = ""
-            console.log(item.po)
             for (var i = 0; i < item.po.length; i++) {
                 tempPo = tempPo + item.po[i].split(" ")[0] + " " + item.poDescription[Object.keys(item.poDescription)[i]] + item.po[i].charAt(item.po[i].length - 1) + "    "
             }
@@ -762,7 +825,6 @@ export default function PlaneacionPage(props) {
             delete tempRetorno["actions"]
             tempRetorno["po"] = tempPo
             let temp_dry = ""
-            //tempRetorno["date"] = moment(tempRetorno["date"]).format("L")
             Object.keys(item.dry_boxes).forEach((key) => {
                 temp_dry = temp_dry + item.dry_boxes[key] + key + " "
             })
@@ -818,16 +880,34 @@ export default function PlaneacionPage(props) {
         setLineProduction(tempLineProdcution)
         setLineStatistics(true)
     }
-    const handleKeyDown = (event) => {
-
-        let charCode = String.fromCharCode(event.which).toLowerCase();
-        if ((event.ctrlKey || event.metaKey) && charCode === 'z') {
-            client.send(JSON.stringify({
+    const handleOnNewDay = async () => {
+        await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/newDay`)
+        handleOnExport("sameday")
+        client.send(
+            JSON.stringify({
                 day: props.day,
-                type: "recoverHist",
-            }))
-
-        }
+                type: "update",
+            })
+        )
+    }
+    const handleKeyDown = async (event) => {
+        /*
+                let charCode = String.fromCharCode(event.which).toLowerCase();
+                if ((event.ctrlKey || event.metaKey) && charCode === 'z') {
+        
+                    const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/popMovement`)
+                        .then(res => res.data)
+                        .catch(err => console.log(err))
+        
+                    if (data !== null) {
+                        client.send(JSON.stringify({
+                            day: props.day,
+                            type: "update",
+                        }))
+                    }
+        
+        
+                }*/
     }
     return (
         <div onKeyDown={handleKeyDown} style={{ overflowY: "hidden" }}>
@@ -835,6 +915,7 @@ export default function PlaneacionPage(props) {
                 {renderDialogProuctividadLineas()}
                 {renderDialogBuscarProducto()}
                 {renderDialogCrearRow()}
+                {renderDialogRecipe()}
                 <Box sx={{
                     height: "95vh",
                     width: '100%',
@@ -850,15 +931,21 @@ export default function PlaneacionPage(props) {
                                 display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
                             }}>
                                 <ListItemButton
-                                    onClick={() => {
-                                        handleOnExport("sameday")
-                                        client.send(
-                                            JSON.stringify({
-                                                day: props.day,
-                                                type: "newday",
-                                            })
-                                        )
+                                    onClick={()=>{
+                                        window.open('/recipes')
                                     }}>
+                                    <ListItemIcon>
+                                        <CollectionsBookmarkIcon />
+                                    </ListItemIcon>
+                                    <ListItemText>Recetas</ListItemText>
+                                </ListItemButton>
+                            </ListItem>
+                            <Divider />
+                            <ListItem sx={{
+                                display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
+                            }}>
+                                <ListItemButton
+                                    onClick={handleOnNewDay}>
                                     <ListItemIcon>
                                         <KeyboardTabRoundedIcon />
                                     </ListItemIcon>
@@ -1058,8 +1145,6 @@ export default function PlaneacionPage(props) {
                     </div>
                 </Box>
             </>
-
-
         </div >
     )
 }
