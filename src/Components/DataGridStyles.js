@@ -1,9 +1,11 @@
 import Paleta from "../util/Pallete"
 
 export const styleDataGrid = {
+    /*
     '& .MuiDataGrid-footerContainer': {
         display: "none"
     },
+    */
 
     '.MuiSvgIcon-root': {
         color: "#fff"

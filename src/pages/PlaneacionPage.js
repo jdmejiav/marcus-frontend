@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react"
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import IconButton from "@mui/material/IconButton";
 import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import Grid from "@mui/material/Grid";
 import Select from "@mui/material/Select";
@@ -49,7 +52,6 @@ const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 export default function PlaneacionPage(props) {
     // States Definition
     const [customers, setCustomers] = useState([])
-
     const [dialogAdd, setDialogAdd] = useState(false)
     const [dialogBuscar, setDialogBuscar] = useState(false)
     const [day, setDay] = useState(props.day)
@@ -72,13 +74,9 @@ export default function PlaneacionPage(props) {
         "Línea 10 (eComerce)": 0,
     })
     const [lineStatistics, setLineStatistics] = useState(false)
-
-
     const [rows, setRows] = useState([])
     const [openSideBar, setOpenSideBar] = useState(false)
     const [tempItem, setTempItem] = useState()
-
-
     const [workOrders, setWorkOrders] = useState(undefined)
     // UseEffect definitions
     useEffect(() => {
@@ -269,10 +267,11 @@ export default function PlaneacionPage(props) {
                         count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
                     ))
                     let qc = false
-                    items[rowPayload.product].poDetails.forEach(item => {
-                        if (item.reference.includes("QC")) {
+
+                    Object.keys(items[rowPayload.product]).forEach(name => {
+                        if (items[rowPayload.product][name].reference.includes("QC")) {
                             Object.keys(rowPayload.poDescription).forEach(po => {
-                                if (po.split(" ")[0] === item.po)
+                                if (po.split(" ")[0] === items[rowPayload.product][name].po)
                                     qc = true
                             })
                         }
@@ -342,15 +341,20 @@ export default function PlaneacionPage(props) {
                             )}
                         >
                             {items === undefined ? <MenuItem value=""></MenuItem> :
-                                (items[params.row.product] === undefined ? <MenuItem value=""></MenuItem> :
-                                    items[params.row.product].poDetails.map((name) =>
-                                    (<MenuItem
-                                        key={name.po + " Age: " + name.age + ", " + name.numBoxes + name.boxType}
-                                        value={name.po + " Age: " + name.age + ", " + name.numBoxes + name.boxType}
-                                    >
-                                        <ListItemText key={name.po + " Age: " + name.age + ", " + name.numBoxes + name.boxType}>{name.po + " Age: " + name.age + ", " + name.numBoxes + name.boxType}</ListItemText>
-                                    </MenuItem>)
-                                    ))
+                                (items[params.row.product] === undefined ? <MenuItem value=""></MenuItem>
+                                    : (Object.keys(items[params.row.product]).map((name) => (
+                                        <MenuItem
+                                            key={items[params.row.product][name].po + " Age: " + items[params.row.product][name].age + ", " + items[params.row.product][name].numBoxes + items[params.row.product][name].boxType}
+                                            value={items[params.row.product][name].po + " Age: " + items[params.row.product][name].age + ", " + items[params.row.product][name].numBoxes + items[params.row.product][name].boxType}
+                                        >
+                                            <ListItemText key={items[params.row.product][name].po + " Age: " + items[params.row.product][name].age + ", "
+                                                + items[params.row.product][name].numBoxes + items[params.row.product][name].boxType}>
+                                                {items[params.row.product][name].po + " Age: " + items[params.row.product][name].age + ", " + items[params.row.product][name].numBoxes +
+                                                    items[params.row.product][name].boxType}
+                                            </ListItemText>
+                                        </MenuItem>
+                                    )))
+                                )
                             }
                         </Select>
                     </FormControl>
@@ -404,10 +408,10 @@ export default function PlaneacionPage(props) {
                                                 count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
                                             ))
                                             let qc = false
-                                            items[params.row.product].poDetails.forEach(item => {
-                                                if (item.reference.includes("QC")) {
+                                            Object.keys(items[params.row.product]).forEach(name => {
+                                                if (items[params.row.product][name].reference.includes("QC")) {
                                                     Object.keys(params.row.poDescription).forEach(po => {
-                                                        if (po.split(" ")[0] === item.po)
+                                                        if (po.split(" ")[0] === items[params.row.product][name].po)
                                                             qc = true
                                                     })
                                                 }
@@ -589,6 +593,9 @@ export default function PlaneacionPage(props) {
         }).catch(err => console.log(err))
     }
     const renderDialogCrearRow = () => {
+
+        const [combo, setCombo] = useState([])
+
         const handleAddRow = async () => {
             if (newProduct !== "") {
                 let row = {
@@ -629,74 +636,85 @@ export default function PlaneacionPage(props) {
         }
         return (
 
-            <DialogComponent visible={dialogAdd}>
-                <Box style={{ backgroundColor: "#fff", padding: "2.5rem 2.5rem 1rem 2.5rem", borderRadius: "1rem", width: "50vw" }}>
-                    <Grid container spacing={4}>
-                        <Grid item xs={6}>
-                            <Autocomplete
-                                id="product-autocomplete"
-                                onChange={(_, value) => {
-                                    if (value !== null) {
-                                        setNewCustomer(items[value.label] !== undefined ? items[value.label].poDetails[0].customer : "")
-                                        setNewProduct(value.label)
-                                    } else {
-                                        setNewCustomer("")
-                                        setNewProduct("")
+            <Dialog onClose={() => { setDialogAdd(false) }} maxWidth open={dialogAdd}>
+                <DialogTitle>Añadir fila</DialogTitle>
+                <DialogContent>
+                    <Box style={{ width: "50vw", paddingTop: 10 }}>
+                        <Grid container spacing={4}>
+                            <Grid item xs={6}>
+                                <Autocomplete
+                                    id="product-autocomplete"
+                                    onChange={(_, value) => {
+                                        if (value !== null) {
+                                            setNewCustomer(items[value.label] !== undefined ? items[value.label][Object.keys(items[value.label])[0]].customer : "")
+                                            setNewProduct(value.label)
+                                        } else {
+                                            setNewCustomer("")
+                                            setNewProduct("")
+                                        }
+                                    }}
+                                    options={items !== undefined ?
+                                        Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : {}}
+
+                                    renderInput={(params) => <TextField fullWidth {...params} value={newProduct} label="Product" />} />
+
+                            </Grid>
+                            <Grid item xs={5}>
+                                <FormControl fullWidth>
+                                    <InputLabel id="customer-label">Customer</InputLabel>
+                                    <Select
+
+                                        labelId="customer-label"
+                                        id="customer-select"
+                                        value={newCustomer}
+                                        label="Customer"
+                                        onChange={(e) => { setNewCustomer(e.target.value) }}
+                                    >
+                                        {
+                                            customers.sort().map((item) => (
+                                                <MenuItem key={item} value={item}>{item}</MenuItem>)
+                                            )
+                                        }
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={1}>
+                                <ListItemButton sx={{height:"100%"}}>
+                                    <ListItemIcon sx={{height:"100%"}}>
+                                        <AddRoundedIcon sx={{height:"100%"}} />
+                                    </ListItemIcon>
+                                </ListItemButton>
+                            </Grid>
+                        </Grid>
+                        <DialogActions>
+                            <Button variant="contianed" sx={{
+                                color: "#fff",
+                                backgroundColor: "RGBA(255, 0, 0, 1)",
+                                "&:hover": {
+                                    backgroundColor: "RGBA(255,0,0,0.8)"
+                                }
+                            }} onClick={() => { setDialogAdd(false) }}>
+                                Cerrar
+                            </Button>
+                            <Button
+                                sx={{
+                                    color: "#fff",
+                                    backgroundColor: "RGBA(152, 208, 70, 1)",
+                                    "&:hover": {
+                                        backgroundColor: "RGBA(152, 208, 70, 0.8)"
                                     }
                                 }}
-                                options={items !== undefined ?
-                                    Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : {}}
+                                variant="contianed" onClick={() => {
+                                    handleAddRow()
+                                    setDialogAdd(false)
+                                }}>
+                                Añadir
+                            </Button>
+                        </DialogActions>
 
-                                renderInput={(params) => <TextField {...params} value={newProduct} label="Product" />} />
-
-                        </Grid>
-                        <Grid item xs={6}>
-                            <FormControl fullWidth>
-                                <InputLabel id="customer-label">Customer</InputLabel>
-                                <Select
-
-                                    labelId="customer-label"
-                                    id="customer-select"
-                                    value={newCustomer}
-                                    label="Customer"
-                                    onChange={(e) => { setNewCustomer(e.target.value) }}
-                                >
-                                    {
-                                        customers.sort().map((item) => (
-                                            <MenuItem key={item} value={item}>{item}</MenuItem>)
-                                        )
-                                    }
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                    </Grid>
-                    <div style={{ marginTop: 10, display: "flex", flexDirection: "row", justifyContent: "center", alignContent: "center", gap: "2rem" }}>
-                        <Button variant="contianed" sx={{
-                            color: "#fff",
-                            backgroundColor: "RGBA(255, 0, 0, 1)",
-                            "&:hover": {
-                                backgroundColor: "RGBA(255,0,0,0.8)"
-                            }
-                        }} onClick={() => { setDialogAdd(false) }}>
-                            Cerrar
-                        </Button>
-                        <Button
-                            sx={{
-                                color: "#fff",
-                                backgroundColor: "RGBA(152, 208, 70, 1)",
-                                "&:hover": {
-                                    backgroundColor: "RGBA(152, 208, 70, 0.8)"
-                                }
-                            }}
-                            variant="contianed" onClick={() => {
-                                handleAddRow()
-                                setDialogAdd(false)
-                            }}>
-                            Añadir
-                        </Button>
-                    </div>
-                </Box>
-            </DialogComponent>
+                    </Box>
+                </DialogContent>
+            </Dialog>
         )
     }
 
@@ -750,7 +768,7 @@ export default function PlaneacionPage(props) {
 
     const renderDialogBuscarProducto = () => {
         return (
-            <Dialog open={dialogBuscar}>
+            <Dialog maxWidth={false} open={dialogBuscar}>
                 <DialogContent>
                     {items === undefined ? <></> :
                         (
@@ -762,19 +780,22 @@ export default function PlaneacionPage(props) {
                                                 {tempItem}
                                             </Typography>
                                         </ListItem>
-                                        <ListItem key="infoProducto">
-                                            <Typography>
-                                                Total Cajas: {items[tempItem] !== undefined ? items[tempItem].numBoxes : <></>}
-                                            </Typography>
-                                        </ListItem>
+                                        {
+                                            /*
+                                            <ListItem key="infoProducto">
+                                                <Typography>
+                                                    Total Cajas: {items[tempItem] !== undefined ? items[tempItem].numBoxes : <></>}
+                                                </Typography>
+                                            </ListItem>*/
+                                        }
                                     </List>
                                     {
-                                        items[tempItem].poDetails.map((detail, idx) => {
+                                        Object.keys(items[tempItem]).map((name) => {
                                             return (
-                                                <List key={idx}>
-                                                    <ListItem key="po">PO: {detail.po}</ListItem>
-                                                    <ListItem key="age">Age: {detail.age}</ListItem>
-                                                    <ListItem key="cajas"># Cajas: {detail.numBoxes}</ListItem>
+                                                <List key={name}>
+                                                    <ListItem key="po">PO: {items[tempItem][name].po}</ListItem>
+                                                    <ListItem key="age">Age: {items[tempItem][name].age}</ListItem>
+                                                    <ListItem key="cajas"># Cajas: {items[tempItem][name].numBoxes}</ListItem>
                                                 </List>
                                             )
                                         })
@@ -931,7 +952,7 @@ export default function PlaneacionPage(props) {
                                 display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
                             }}>
                                 <ListItemButton
-                                    onClick={()=>{
+                                    onClick={() => {
                                         window.open('/recipes')
                                     }}>
                                     <ListItemIcon>
@@ -1086,6 +1107,15 @@ export default function PlaneacionPage(props) {
                         }}
                     >
                     </DataGrid>
+                    <Typography sx={{
+                        position: "Sticky",
+                        bottom: "5px",
+                        marginLeft: "10px"
+
+                    }}>
+                        Total WetPacks: {rows.map(row => row.wet_pack).reduce((partialSum, a) => partialSum + (a === undefined ? 0 : a), 0)}
+                    </Typography>
+
                     <div style={{
                         display: (rol in RolesBotones ? "flex" : "none"),
                         flexDirection: "row",
