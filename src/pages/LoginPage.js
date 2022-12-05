@@ -32,7 +32,7 @@ export default function LoginPage() {
     }
 
     const handleOnLogin = async () => {
-        await axios.post("http://20.7.2.215:8080/login", {
+        await axios.post("http://172.20.0.193:8080/login", {
             username: username,
             password: password
         }).then((res) => {

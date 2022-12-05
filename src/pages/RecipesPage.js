@@ -55,19 +55,12 @@ const RecipesPage = () => {
                             <CardContent>
                                 <List>
                                     <ListItem>
-                                        <TextField type="number" fullWidth disabled={recipes[res].edit} id="outlined-basic" label="Wet Packs" variant="outlined" value={recipes[res].wp} onChange={(e) => {
+                                        <TextField type="number" fullWidth disabled={recipes[res].edit} id="outlined-basic" label="Bunch x Wet Pack" variant="outlined" value={recipes[res].wp} onChange={(e) => {
                                             let copy = { ...recipes }
                                             copy[res].wp = e.target.value
                                             setRecipes(copy)
                                         }}>
                                         </TextField>
-                                    </ListItem>
-                                    <ListItem>
-                                        <TextField type="number" fullWidth disabled={recipes[res].edit} id="outlined-basic" label="Dry" variant="outlined" value={recipes[res].dry} onChange={(e) => {
-                                            let copy = { ...recipes }
-                                            copy[res].dry = e.target.value
-                                            setRecipes(copy)
-                                        }}></TextField>
                                     </ListItem>
                                     <ListItem>
                                         <ListItemButton

@@ -43,9 +43,8 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import KeyboardTabRoundedIcon from '@mui/icons-material/KeyboardTabRounded';
 import { Divider } from "@mui/material";
-import DialogComponent from "../Components/DialogComponent";
 import axios from "axios";
-import BoxEquivalencies from "../util/BoxEquivalencies";
+import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
 
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
@@ -115,9 +114,7 @@ export default function PlaneacionPage(props) {
             const dataFromServer = JSON.parse(message.data);
             if (dataFromServer.day === props.day) {
                 if (dataFromServer.type === "update") {
-
                     const rowsUpdated = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/getRows`).then(res => res.data)
-                    console.log(rowsUpdated)
                     setRows(rowsUpdated)
                 }
             }
@@ -149,7 +146,7 @@ export default function PlaneacionPage(props) {
         } else {
             if (e.field === "wo") {
                 if (workOrders[e.value] !== undefined) {
-                    rowPayload["wet_pack"] = workOrders[e.value].boxes
+                    //rowPayload["wet_pack"] = workOrders[e.value].boxes
                     rowPayload["box_code"] = workOrders[e.value].boxCode
                 }
             }
@@ -241,6 +238,7 @@ export default function PlaneacionPage(props) {
             hideable: Roles[rol].po.hideable,
             renderCell: (params) => {
                 const [pos, setPos] = useState(params.row === undefined ? [] : params.row.po)
+
                 useEffect(() => {
                     setPos(params.row === undefined ? [] : params.row.po)
                 }, [rows])
@@ -268,14 +266,19 @@ export default function PlaneacionPage(props) {
                     ))
                     let qc = false
 
-                    Object.keys(items[rowPayload.product]).forEach(name => {
-                        if (items[rowPayload.product][name].reference.includes("QC")) {
-                            Object.keys(rowPayload.poDescription).forEach(po => {
-                                if (po.split(" ")[0] === items[rowPayload.product][name].po)
-                                    qc = true
-                            })
-                        }
+
+                    rowPayload.product.split(", ").forEach(productName => {
+                        Object.keys(items[productName]).forEach(name => {
+                            if (items[productName][name].reference.includes("QC")) {
+                                Object.keys(rowPayload.poDescription).forEach(po => {
+                                    if (po.split(" ")[0] === items[productName][name].po)
+                                        qc = true
+                                })
+                            }
+                        })
                     })
+
+
                     if (qc) {
                         const tempCommentSplit = rowPayload.comment.split("|")
                         let tempComment = ""
@@ -340,21 +343,26 @@ export default function PlaneacionPage(props) {
                                 </Box>
                             )}
                         >
-                            {items === undefined ? <MenuItem value=""></MenuItem> :
-                                (items[params.row.product] === undefined ? <MenuItem value=""></MenuItem>
-                                    : (Object.keys(items[params.row.product]).map((name) => (
-                                        <MenuItem
-                                            key={items[params.row.product][name].po + " Age: " + items[params.row.product][name].age + ", " + items[params.row.product][name].numBoxes + items[params.row.product][name].boxType}
-                                            value={items[params.row.product][name].po + " Age: " + items[params.row.product][name].age + ", " + items[params.row.product][name].numBoxes + items[params.row.product][name].boxType}
-                                        >
-                                            <ListItemText key={items[params.row.product][name].po + " Age: " + items[params.row.product][name].age + ", "
-                                                + items[params.row.product][name].numBoxes + items[params.row.product][name].boxType}>
-                                                {items[params.row.product][name].po + " Age: " + items[params.row.product][name].age + ", " + items[params.row.product][name].numBoxes +
-                                                    items[params.row.product][name].boxType}
-                                            </ListItemText>
-                                        </MenuItem>
-                                    )))
-                                )
+                            {
+                                items === undefined ? <MenuItem value=""></MenuItem> :
+                                    (params.row.product.split(", ").map(productName => (
+                                        items[productName] !== undefined ?
+                                            (Object.keys(items[productName]).map((name) => (
+                                                <MenuItem
+                                                    key={items[productName][name].po + " Age: " + items[productName][name].age + ", " + items[productName][name].numBoxes + items[productName][name].boxType}
+                                                    value={items[productName][name].po + " Age: " + items[productName][name].age + ", " + items[productName][name].numBoxes + items[productName][name].boxType}
+                                                >
+                                                    <ListItemText key={items[productName][name].po + " Age: " + items[productName][name].age + ", "
+                                                        + items[productName][name].numBoxes + items[productName][name].boxType}>
+                                                        {items[productName][name].po + " Age: " + items[productName][name].age + ", " + items[productName][name].numBoxes +
+                                                            items[productName][name].boxType}
+                                                    </ListItemText>
+                                                </MenuItem>
+                                            )))
+                                            :
+                                            <MenuItem value=""></MenuItem>
+                                    )
+                                    ))
                             }
                         </Select>
                     </FormControl>
@@ -377,7 +385,6 @@ export default function PlaneacionPage(props) {
                                     },
                                 }}>
                                 {
-
                                     Object.keys(params.row.poDescription).map((key, idx) => {
                                         const handleOnPONumberChange = (e) => {
                                             let copy = [...rows]
@@ -408,14 +415,18 @@ export default function PlaneacionPage(props) {
                                                 count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
                                             ))
                                             let qc = false
-                                            Object.keys(items[params.row.product]).forEach(name => {
-                                                if (items[params.row.product][name].reference.includes("QC")) {
-                                                    Object.keys(params.row.poDescription).forEach(po => {
-                                                        if (po.split(" ")[0] === items[params.row.product][name].po)
-                                                            qc = true
+                                            params.row.product.split(", ").forEach(
+                                                productName => {
+                                                    Object.keys(items[productName]).forEach(name => {
+                                                        if (items[productName][name].reference.includes("QC")) {
+                                                            Object.keys(params.row.poDescription).forEach(po => {
+                                                                if (po.split(" ")[0] === items[productName][name].po)
+                                                                    qc = true
+                                                            })
+                                                        }
                                                     })
                                                 }
-                                            })
+                                            )
                                             if (qc) {
                                                 const tempCommentSplit = params.row.comment.split("|")
                                                 let tempComment = ""
@@ -430,17 +441,6 @@ export default function PlaneacionPage(props) {
                                                 params.row.comment = params.row.comment.replace("| Quality Check", '')
                                             }
                                             params.row.dry_boxes = count
-                                            if (params.row.product in recipes) {
-                                                let tempWetPack = 0
-                                                let tempRecipe = recipes[params.row.product]
-                                                Object.keys(params.row.dry_boxes).forEach((boxCode) => {
-                                                    if (boxCode in BoxEquivalencies) {
-                                                        let fullEquivalent = params.row.dry_boxes[boxCode] / BoxEquivalencies[boxCode]
-                                                        tempWetPack = tempWetPack + ((fullEquivalent * tempRecipe.wp) / tempRecipe.dry)
-                                                    }
-                                                })
-                                                params.row.wet_pack = tempWetPack
-                                            }
                                         }
                                         const updateRow = async (e) => {
                                             await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/updateRow/${params.row._id}`, params.row)
@@ -485,15 +485,20 @@ export default function PlaneacionPage(props) {
             width: 110, field: "dry_boxes", headerName: "Dry Boxes",
             editable: false,
             hideable: Roles[rol].dry_boxes.hideable,
-            renderCell: (params) => (
-                <List>
+            renderCell: (params) => {
+
+                return <List>
                     {
                         params.row.dry_boxes === undefined ?
                             <></> :
-                            Object.keys(params.row.dry_boxes).map((key) => (<Typography key={key}>{params.row.dry_boxes[key]}{key}</Typography>))
+                            <>
+                                {Object.keys(params.row.dry_boxes).map((key) => (<Typography key={key}>{params.row.dry_boxes[key]}{key}</Typography>))}
+                                <br></br>
+                                { }
+                            </>
                     }
                 </List>
-            )
+            }
         },
         {
             width: 110, field: "pull_date", headerName: "Pull Date",
@@ -502,7 +507,37 @@ export default function PlaneacionPage(props) {
         },
         {
             width: 110, field: "wet_pack", headerName: "Wet Pack", type: "number",
-            editable: Roles[rol].wet_pack.edit
+            editable: Roles[rol].wet_pack.edit,
+            renderCell: (params => {
+                const dryValue = () => {
+                    let dry_boxes = 0;
+                    params.row.product.split(", ").forEach(productName => {
+                        dry_boxes = dry_boxes + Math.round(((params.value * recipes[productName].dry) / recipes[productName].wp) * 100) / 100
+                    })
+                    return dry_boxes
+                }
+                if (params.value !== undefined) {
+                    let dry_boxes = 0
+                    params.row.product.split(", ").forEach(productName => {
+                        dry_boxes = dry_boxes + Math.round(((params.value * recipes[productName].dry) / recipes[productName].wp) * 100) / 100
+                    })
+                }
+                if (params.row.product in recipes) {
+                    return <Typography>
+                        Wet: {
+                            params.value !== undefined ?
+                                Math.round(params.value * 100) / 100 : 0
+                        }
+                        <br></br>
+                        Dry: {
+                            (params.value !== undefined ?
+                                dryValue() : 0)
+                        }
+                    </Typography>
+                } else {
+                    return <Typography>{params.value}</Typography>
+                }
+            })
         },
         {
             width: 250, field: "comment", headerName: "Comment",
@@ -598,12 +633,29 @@ export default function PlaneacionPage(props) {
 
         const handleAddRow = async () => {
             if (newProduct !== "") {
+                var copyNewProduct = ""
+                if (combo.length > 0) {
+                    console.log("entra acá jje")
+                    let copy = [...combo]
+                    copy.push(newProduct)
+                    copy.sort()
+                    for (var i = 0; i < copy.length; i++) {
+                        if (i === copy.length - 1) {
+                            copyNewProduct = copyNewProduct + copy[i]
+                        } else {
+                            copyNewProduct = copyNewProduct + copy[i] + ", "
+                        }
+                    }
+                } else {
+                    copyNewProduct = newProduct
+                }
+
                 let row = {
                     id: rows.length === 0 ? 1 : rows[rows.length - 1].id + 1,
                     actions: "",
                     date: new Date(),
                     customer: newCustomer,
-                    product: newProduct,
+                    product: copyNewProduct,
                     po: [],
                     poDescription: {},
                     dry_boxes: {},
@@ -679,13 +731,54 @@ export default function PlaneacionPage(props) {
                                 </FormControl>
                             </Grid>
                             <Grid item xs={1}>
-                                <ListItemButton sx={{height:"100%"}}>
-                                    <ListItemIcon sx={{height:"100%"}}>
-                                        <AddRoundedIcon sx={{height:"100%"}} />
+                                <ListItemButton onClick={() => {
+                                    let copy = [...combo]
+                                    copy.push("")
+                                    setCombo(copy)
+                                }} sx={{ height: "100%" }}>
+                                    <ListItemIcon sx={{ height: "100%" }}>
+                                        <AddRoundedIcon sx={{ height: "100%" }} />
                                     </ListItemIcon>
                                 </ListItemButton>
                             </Grid>
                         </Grid>
+                        {
+                            combo.map((item, idx) => (
+                                <Grid sx={{ mt: 1, mb: 1 }} key={idx} container spacing={4}>
+                                    <Grid item xs={6}>
+                                        <Autocomplete
+                                            id="product-autocomplete"
+                                            onChange={(_, value) => {
+                                                if (value !== null) {
+                                                    let copy = [...combo]
+                                                    copy[idx] = value.label
+                                                    setCombo(copy)
+                                                } else {
+                                                    setNewCustomer("")
+                                                    setNewProduct("")
+                                                }
+                                            }}
+                                            options={items !== undefined ?
+                                                Object.keys(items).sort().map((product, idx) => ({ "label": product, id: idx })) : {}}
+
+                                            renderInput={(params) => <TextField fullWidth {...params} value={item} label="Product" />} />
+                                    </Grid>
+                                    <Grid item xs={5}></Grid>
+                                    <Grid item xs={1}>
+                                        <ListItemButton onClick={() => {
+                                            let copy = [...combo]
+                                            copy.splice(idx, 1)
+                                            setCombo(copy)
+                                        }} sx={{ height: "100%" }}>
+                                            <ListItemIcon sx={{ height: "100%" }}>
+                                                <RemoveRoundedIcon sx={{ height: "100%" }} />
+                                            </ListItemIcon>
+                                        </ListItemButton>
+                                    </Grid>
+                                </Grid>
+                            )
+                            )
+                        }
                         <DialogActions>
                             <Button variant="contianed" sx={{
                                 color: "#fff",
@@ -707,6 +800,9 @@ export default function PlaneacionPage(props) {
                                 variant="contianed" onClick={() => {
                                     handleAddRow()
                                     setDialogAdd(false)
+                                    if (!(newProduct in recipes)) {
+                                        setDialogRecipe(true)
+                                    }
                                 }}>
                                 Añadir
                             </Button>
@@ -721,47 +817,52 @@ export default function PlaneacionPage(props) {
 
     const renderDialogRecipe = () => {
         return (
-            <DialogComponent visible={dialogRecipe}>
-                <Box style={{ backgroundColor: "#fff", padding: "2.5rem 2.5rem 1rem 2.5rem", borderRadius: "1rem", width: "50vw" }}>
-                    <Typography>Receta: {newProduct}</Typography>
-                    <Grid container spacing={4}>
-                        <Grid item xs={6}>
-                            <TextField onChange={(e) => { setWet(e.target.value) }} value={wet} fullWidth type="number" id="outlined-basic" label="Wet" variant="outlined" />
+            <Dialog onClose={() => { setDialogRecipe(false) }} maxWidth={false} open={dialogRecipe}>
+                <DialogTitle>
+                    Receta: {newProduct}
+                </DialogTitle>
+                <DialogContent >
+                    <Box style={{ width: "50vw", paddingTop: 10 }}>
+
+                        <Grid container spacing={4}>
+                            <Grid item xs={6}>
+                                <TextField onChange={(e) => { setWet(e.target.value) }} value={wet} fullWidth type="number" id="outlined-basic" label="Wet" variant="outlined" />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <TextField onChange={(e) => { setDry(e.target.value) }} value={dry} fullWidth type="number" id="outlined-basic" label="Dry" variant="outlined" />
+                            </Grid>
                         </Grid>
-                        <Grid item xs={6}>
-                            <TextField onChange={(e) => { setDry(e.target.value) }} value={dry} fullWidth type="number" id="outlined-basic" label="Dry" variant="outlined" />
-                        </Grid>
-                    </Grid>
-                    <div style={{ marginTop: 10, display: "flex", flexDirection: "row", justifyContent: "center", alignContent: "center", gap: "2rem" }}>
-                        <Button variant="contianed" sx={{
-                            color: "#fff",
-                            backgroundColor: "RGBA(255, 0, 0, 1)",
-                            "&:hover": {
-                                backgroundColor: "RGBA(255,0,0,0.8)"
-                            }
-                        }} onClick={() => { setDialogRecipe(false) }}>
-                            Cerrar
-                        </Button>
-                        <Button
-                            sx={{
+                        <DialogActions>
+                            <Button variant="contianed" sx={{
                                 color: "#fff",
-                                backgroundColor: "RGBA(152, 208, 70, 1)",
+                                backgroundColor: "RGBA(255, 0, 0, 1)",
                                 "&:hover": {
-                                    backgroundColor: "RGBA(152, 208, 70, 0.8)"
+                                    backgroundColor: "RGBA(255,0,0,0.8)"
                                 }
-                            }}
-                            variant="contianed"
-                            onClick={async () => {
-                                await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/addRecipe`, { product: newProduct, wp: wet, dry: dry })
-                                setDialogRecipe(false)
-                                setWet(0)
-                                setDry(0)
-                            }}>
-                            Añadir
-                        </Button>
-                    </div>
-                </Box>
-            </DialogComponent>
+                            }} onClick={() => { setDialogRecipe(false) }}>
+                                Cerrar
+                            </Button>
+                            <Button
+                                sx={{
+                                    color: "#fff",
+                                    backgroundColor: "RGBA(152, 208, 70, 1)",
+                                    "&:hover": {
+                                        backgroundColor: "RGBA(152, 208, 70, 0.8)"
+                                    }
+                                }}
+                                variant="contianed"
+                                onClick={async () => {
+                                    await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/addRecipe`, { product: newProduct, wp: wet, dry: dry })
+                                    setDialogRecipe(false)
+                                    setWet(0)
+                                    setDry(0)
+                                }}>
+                                Añadir
+                            </Button>
+                        </DialogActions>
+                    </Box>
+                </DialogContent >
+            </Dialog>
         )
     }
 
@@ -769,26 +870,12 @@ export default function PlaneacionPage(props) {
     const renderDialogBuscarProducto = () => {
         return (
             <Dialog maxWidth={false} open={dialogBuscar}>
+                <DialogTitle>{tempItem}</DialogTitle>
                 <DialogContent>
                     {items === undefined ? <></> :
                         (
                             items[tempItem] !== undefined ?
                                 <Grid item style={{ margin: 10, display: "flex", flexDirection: "row", overflow: "auto" }} xs={12}>
-                                    <List>
-                                        <ListItem key="nombre">
-                                            <Typography>
-                                                {tempItem}
-                                            </Typography>
-                                        </ListItem>
-                                        {
-                                            /*
-                                            <ListItem key="infoProducto">
-                                                <Typography>
-                                                    Total Cajas: {items[tempItem] !== undefined ? items[tempItem].numBoxes : <></>}
-                                                </Typography>
-                                            </ListItem>*/
-                                        }
-                                    </List>
                                     {
                                         Object.keys(items[tempItem]).map((name) => {
                                             return (
@@ -802,9 +889,18 @@ export default function PlaneacionPage(props) {
                                     }
                                 </Grid> : <></>)
                     }
-                    <Button onClick={() => { setDialogBuscar(false) }}>
-                        Cerrar
-                    </Button>
+                    <DialogActions>
+                        <Button sx={{
+                            color: "#fff",
+                            backgroundColor: "RGBA(255, 0, 0, 1)",
+                            "&:hover": {
+                                backgroundColor: "RGBA(255,0,0,0.8)"
+                            }
+                        }} onClick={() => { setDialogBuscar(false) }}>
+                            Cerrar
+                        </Button>
+                    </DialogActions>
+
                 </DialogContent>
             </Dialog>
         )
@@ -823,18 +919,29 @@ export default function PlaneacionPage(props) {
                         })
                     }
                 </Grid>
-                <Button onClick={() => { setLineStatistics(false) }}>
-                    Cerrar
-                </Button>
+                <DialogActions>
+                    <Button
+                        sx={{
+                            color: "#fff",
+                            backgroundColor: "RGBA(255, 0, 0, 1)",
+                            "&:hover": {
+                                backgroundColor: "RGBA(255,0,0,0.8)"
+                            }
+                        }}
+                        onClick={() => { setLineStatistics(false) }}>
+                        Cerrar
+                    </Button>
+                </DialogActions>
             </DialogContent>
         </Dialog>
         )
     }
     const handleOnExport = async (referenceDay) => {
+        console.log(`${process.env.REACT_APP_REST_BACKEND_URL}/${referenceDay}/getRows`)
         const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${referenceDay}/getRows`)
             .then(res => res.data)
             .catch(err => console.log(err))
-
+        console.log(data)
         let objectMaxLength = Array(21).fill(10)
         let bodyTemp = data.map(item => {
             const tempRetorno = JSON.parse(JSON.stringify(item))
@@ -902,8 +1009,8 @@ export default function PlaneacionPage(props) {
         setLineStatistics(true)
     }
     const handleOnNewDay = async () => {
-        await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/newDay`)
         handleOnExport("sameday")
+        await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/newDay`)
         client.send(
             JSON.stringify({
                 day: props.day,
@@ -911,27 +1018,8 @@ export default function PlaneacionPage(props) {
             })
         )
     }
-    const handleKeyDown = async (event) => {
-        /*
-                let charCode = String.fromCharCode(event.which).toLowerCase();
-                if ((event.ctrlKey || event.metaKey) && charCode === 'z') {
-        
-                    const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/popMovement`)
-                        .then(res => res.data)
-                        .catch(err => console.log(err))
-        
-                    if (data !== null) {
-                        client.send(JSON.stringify({
-                            day: props.day,
-                            type: "update",
-                        }))
-                    }
-        
-        
-                }*/
-    }
     return (
-        <div onKeyDown={handleKeyDown} style={{ overflowY: "hidden" }}>
+        <div style={{ overflowY: "hidden" }}>
             <>
                 {renderDialogProuctividadLineas()}
                 {renderDialogBuscarProducto()}
@@ -1113,19 +1201,20 @@ export default function PlaneacionPage(props) {
                         marginLeft: "10px"
 
                     }}>
-                        Total WetPacks: {rows.map(row => row.wet_pack).reduce((partialSum, a) => partialSum + (a === undefined ? 0 : a), 0)}
+                        Total WetPacks: {rows.map(row => row.wet_pack).reduce((partialSum, a) => partialSum + (a === undefined ? 0 : Math.round(a * 100) / 100), 0)}
                     </Typography>
-
-                    <div style={{
-                        display: (rol in RolesBotones ? "flex" : "none"),
-                        flexDirection: "row",
-                        gap: "1rem",
-                        position: "absolute",
-                        bottom: "6px",
-                        width: "max-content",
-                        left: "84%",
-                    }}>
+                    <div
+                        style={{
+                            display: (rol in RolesBotones ? "flex" : "none"),
+                            flexDirection: "row",
+                            gap: "1rem",
+                            position: "absolute",
+                            bottom: "6px",
+                            width: "max-content",
+                            left: "84%",
+                        }}>
                         <Fab
+                            disabled={!(items !== undefined && workOrders !== undefined)}
                             sx={{
                                 backgroundColor: "#000",
                                 '&:hover': {
@@ -1137,6 +1226,7 @@ export default function PlaneacionPage(props) {
                             <SettingsRoundedIcon sx={{ color: "#fff" }} />
                         </Fab>
                         <Fab
+                            disabled={!(items !== undefined && workOrders !== undefined)}
                             sx={{
                                 backgroundColor: Paleta.amarillo,
                                 '&:hover': {
@@ -1148,6 +1238,7 @@ export default function PlaneacionPage(props) {
                             <QueryStatsRoundedIcon />
                         </Fab>
                         <Fab
+                            disabled={!(items !== undefined && workOrders !== undefined)}
                             sx={{ backgroundColor: "#fff" }}
                             onClick={() => {
                                 handleOnExport(props.day)
@@ -1156,6 +1247,7 @@ export default function PlaneacionPage(props) {
                             <img
                                 alt="Excel"
                                 style={{
+                                    opacity: (items !== undefined && workOrders !== undefined ? 1 : 0.1),
                                     color: "#fff",
                                     height: "30px",
                                     width: "30px"
@@ -1163,6 +1255,7 @@ export default function PlaneacionPage(props) {
                                 src={Excel}></img>
                         </Fab>
                         <Fab
+                            disabled={!(items !== undefined && workOrders !== undefined)}
                             sx={{ backgroundColor: Paleta.azulOscuro }}
                             style={{
                                 marginRight: "1rem"

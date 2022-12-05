@@ -39,7 +39,7 @@ export default function SignUpPage() {
 
 
     const handleOnLogin = async () => {
-        await axios.post("http://20.7.2.215:8080/register", {
+        await axios.post("http://172.20.0.193:8080/register", {
             firstName: firstName,
             lastName: lastName,
             username: username,
