@@ -15,6 +15,9 @@ import IconButton from "@mui/material/IconButton";
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import Paleta from "../util/Pallete";
+import AddIcon from '@mui/icons-material/Add'
+import Fab from '@mui/material/Fab';
+
 const RecipesPage = () => {
 
     const [recipes, setRecipes] = useState(undefined)
@@ -63,6 +66,14 @@ const RecipesPage = () => {
                                         </TextField>
                                     </ListItem>
                                     <ListItem>
+                                        <TextField type="number" fullWidth disabled={recipes[res].edit} id="outlined-basic" label="Bunch x Dry Full" variant="outlined" value={recipes[res].dry} onChange={(e) => {
+                                            let copy = { ...recipes }
+                                            copy[res].dry = e.target.value
+                                            setRecipes(copy)
+                                        }}>
+                                        </TextField>
+                                    </ListItem>
+                                    <ListItem>
                                         <ListItemButton
                                             onClick={async () => {
                                                 await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/updateRecipe/${recipes[res]._id}`, recipes[res])
@@ -86,10 +97,21 @@ const RecipesPage = () => {
                                 </List>
                             </CardContent>
                         </Card>
-
                     </Grid>)}
             </Grid>
         }
+        <div style={{
+            position: "sticky",
+            bottom: 10
+        }}>
+            <Fab
+                sx={{ backgroundColor: Paleta.azulOscuro }}
+                style={{
+                    marginRight: "1rem"
+                }} color="primary" aria-label="add">
+                <AddIcon />
+            </Fab>
+        </div>
     </Box>
 }
 

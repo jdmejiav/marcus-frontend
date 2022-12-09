@@ -23,6 +23,7 @@ import { DataGrid } from "@mui/x-data-grid";
 import { w3cwebsocket as W3CWebSocket } from "websocket"
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 import moment from "moment";
 import Button from "@mui/material/Button";
@@ -34,7 +35,6 @@ import { styleDataGrid } from "../Components/DataGridStyles";
 import { utils, writeFileXLSX } from 'xlsx';
 import { workOrdersFetch } from "../Components/WorkOrders";
 import QueryStatsRoundedIcon from '@mui/icons-material/QueryStatsRounded';
-import { productivities } from "../util/Productivities";
 import { Roles, RolesLineas, RolesBotones } from "../util/RolesDiagram";
 import SwipeableDrawer from '@mui/material/SwipeableDrawer';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -45,6 +45,7 @@ import KeyboardTabRoundedIcon from '@mui/icons-material/KeyboardTabRounded';
 import { Divider } from "@mui/material";
 import axios from "axios";
 import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
+import WetPackLineasComponent from "../Components/WetPackLineasComponent";
 
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
@@ -62,20 +63,11 @@ export default function PlaneacionPage(props) {
     const [dialogRecipe, setDialogRecipe] = useState(false)
     const [dry, setDry] = useState(0)
     const [wet, setWet] = useState(0)
-    const [lineProduction, setLineProduction] = useState({
-        "línea 1": 0,
-        "línea 2": 0,
-        "línea 3": 0,
-        "línea 4": 0,
-        "línea 5": 0,
-        "Vase L1": 0,
-        "Vase L2": 0,
-        "Línea 10 (eComerce)": 0,
-    })
-    const [lineStatistics, setLineStatistics] = useState(false)
+    const [openWetPackDialog, setOpenWetPackDialog] = useState(false)
+
     const [rows, setRows] = useState([])
     const [openSideBar, setOpenSideBar] = useState(false)
-    const [tempItem, setTempItem] = useState()
+    const [tempItem, setTempItem] = useState("")
     const [workOrders, setWorkOrders] = useState(undefined)
     // UseEffect definitions
     useEffect(() => {
@@ -486,7 +478,21 @@ export default function PlaneacionPage(props) {
             editable: false,
             hideable: Roles[rol].dry_boxes.hideable,
             renderCell: (params) => {
+                const wetValue = () => {
+                    let tempDry = 0
+                    params.row.product.split(", ").forEach(productName => {
+                        Object.keys(params.row.poDescription).forEach((key) => {
+                            let tempPo = key.split(" ")[0] + key.charAt(key.length - 1)
 
+                            if (items[productName][tempPo] !== undefined) {
+                                let pack = items[productName][tempPo].pack
+                                let packWet = recipes[productName].wp
+                                tempDry = tempDry + (Math.round(((pack * params.row.poDescription[key]) / packWet) * 100) / 100)
+                            }
+                        })
+                    })
+                    return tempDry
+                }
                 return <List>
                     {
                         params.row.dry_boxes === undefined ?
@@ -494,11 +500,16 @@ export default function PlaneacionPage(props) {
                             <>
                                 {Object.keys(params.row.dry_boxes).map((key) => (<Typography key={key}>{params.row.dry_boxes[key]}{key}</Typography>))}
                                 <br></br>
-                                { }
+                                {recipes[params.row.product] === undefined || items === undefined ? undefined : "Wet => " + wetValue()}
                             </>
                     }
-                </List>
+                </List >
             }
+        },
+        {
+            width: 250, field: "comment", headerName: "Comment",
+            editable: Roles[rol].comment.edit,
+            hideable: Roles[rol].comment.hideable,
         },
         {
             width: 110, field: "pull_date", headerName: "Pull Date",
@@ -512,15 +523,9 @@ export default function PlaneacionPage(props) {
                 const dryValue = () => {
                     let dry_boxes = 0;
                     params.row.product.split(", ").forEach(productName => {
-                        dry_boxes = dry_boxes + Math.round(((params.value * recipes[productName].dry) / recipes[productName].wp) * 100) / 100
+                        dry_boxes = dry_boxes + Math.round(((params.value * recipes[productName].wp) / recipes[productName].dry) * 100) / 100
                     })
                     return dry_boxes
-                }
-                if (params.value !== undefined) {
-                    let dry_boxes = 0
-                    params.row.product.split(", ").forEach(productName => {
-                        dry_boxes = dry_boxes + Math.round(((params.value * recipes[productName].dry) / recipes[productName].wp) * 100) / 100
-                    })
                 }
                 if (params.row.product in recipes) {
                     return <Typography>
@@ -533,6 +538,7 @@ export default function PlaneacionPage(props) {
                             (params.value !== undefined ?
                                 dryValue() : 0)
                         }
+                        <br></br>
                     </Typography>
                 } else {
                     return <Typography>{params.value}</Typography>
@@ -540,25 +546,9 @@ export default function PlaneacionPage(props) {
             })
         },
         {
-            width: 250, field: "comment", headerName: "Comment",
-            editable: Roles[rol].comment.edit,
-            hideable: Roles[rol].comment.hideable,
-        },
-        {
-            width: 110, field: "priority", headerName: "Priority", sortable: true, type: "singleSelect",
-            editable: Roles[rol].priority.edit,
-            hideable: Roles[rol].priority.hideable,
-            valueOptions: ["", "Prioridad 1", "Prioridad 2", "Prioridad 3", "Pausada"]
-        },
-        {
             width: 110, field: "wo", headerName: "W.O.",
             editable: Roles[rol].wo.edit,
             hideable: Roles[rol].wo.hideable,
-        },
-        {
-            width: 110, field: "exit_order", headerName: "Orden Salida", type: "number",
-            editable: Roles[rol].exit_order.edit,
-            hideable: Roles[rol].exit_order.hideable,
         },
         {
             width: 110, field: "line", headerName: "Line", type: "singleSelect",
@@ -570,6 +560,17 @@ export default function PlaneacionPage(props) {
                 }
                 return ["LINE 1", "LINE 2", "LINE 3", "LINE 4", "LINE 5", "LINE 6", "LINE 7", "LINE 8", "LINE 9", "LINE 11", "Vase L1", "Vase L2", "Vase L3", "Vase L4", "LINE 10 (eComerce)", "Line Dry"]
             },
+        },
+        {
+            width: 110, field: "priority", headerName: "Priority", sortable: true, type: "singleSelect",
+            editable: Roles[rol].priority.edit,
+            hideable: Roles[rol].priority.hideable,
+            valueOptions: ["", "Prioridad 1", "Prioridad 2", "Prioridad 3", "Pausada"]
+        },
+        {
+            width: 110, field: "exit_order", headerName: "Orden Salida", type: "number",
+            editable: Roles[rol].exit_order.edit,
+            hideable: Roles[rol].exit_order.hideable,
         },
         {
             width: 110, field: "turno", headerName: "Turno", type: "singleSelect",
@@ -613,11 +614,17 @@ export default function PlaneacionPage(props) {
             hideable: Roles[rol].hargoods_status.hideable,
         },
     ]
-    const getItems = async () => {
-        const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/fetchInventory`).then(res => res.data)
+    const refreshItems = async () => {
+        const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/refreshInventory`).then(res => res.data).catch(err => console.log(err))
+        console.log(info)
         setItems(info.items)
         setCustomers(info.customers)
-        return workOrders
+    }
+    const getItems = async () => {
+        const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/fetchInventory`).then(res => res.data).catch(err => console.log(err))
+        console.log(info.items["BH EURO BQT WINTER"]["114079F"])
+        setItems(info.items)
+        setCustomers(info.customers)
     }
     const sendDeleteItem = async (_id) => {
         await axios.delete(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/deleteRow/${_id}`).then(_ => {
@@ -709,7 +716,6 @@ export default function PlaneacionPage(props) {
                                         Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : {}}
 
                                     renderInput={(params) => <TextField fullWidth {...params} value={newProduct} label="Product" />} />
-
                             </Grid>
                             <Grid item xs={5}>
                                 <FormControl fullWidth>
@@ -856,6 +862,7 @@ export default function PlaneacionPage(props) {
                                     setDialogRecipe(false)
                                     setWet(0)
                                     setDry(0)
+                                    getRecipes()
                                 }}>
                                 Añadir
                             </Button>
@@ -873,21 +880,25 @@ export default function PlaneacionPage(props) {
                 <DialogTitle>{tempItem}</DialogTitle>
                 <DialogContent>
                     {items === undefined ? <></> :
-                        (
-                            items[tempItem] !== undefined ?
+                        tempItem.split(", ").map(productName => (
+                            items[productName] !== undefined ?
                                 <Grid item style={{ margin: 10, display: "flex", flexDirection: "row", overflow: "auto" }} xs={12}>
                                     {
-                                        Object.keys(items[tempItem]).map((name) => {
+                                        Object.keys(items[productName]).map((name) => {
                                             return (
                                                 <List key={name}>
-                                                    <ListItem key="po">PO: {items[tempItem][name].po}</ListItem>
-                                                    <ListItem key="age">Age: {items[tempItem][name].age}</ListItem>
-                                                    <ListItem key="cajas"># Cajas: {items[tempItem][name].numBoxes}</ListItem>
+                                                    <ListItem key="po">PO: {items[productName][name].po}</ListItem>
+                                                    <ListItem key="boxType">Tipo: {items[productName][name].boxType}</ListItem>
+                                                    <ListItem key="age">Age: {items[productName][name].age}</ListItem>
+                                                    <ListItem key="cajas"># Cajas: {items[productName][name].numBoxes}</ListItem>
+                                                    <ListItem key="pack"># Pack: {items[productName][name].pack}</ListItem>
+                                                    <ListItem key="reference">Reference: {items[productName][name].reference}</ListItem>
                                                 </List>
                                             )
                                         })
+
                                     }
-                                </Grid> : <></>)
+                                </Grid> : <></>))
                     }
                     <DialogActions>
                         <Button sx={{
@@ -905,37 +916,7 @@ export default function PlaneacionPage(props) {
             </Dialog>
         )
     }
-    const renderDialogProuctividadLineas = () => {
-        return (<Dialog open={lineStatistics}>
-            <DialogContent>
-                <Grid container spacing={1}>
-                    {
-                        Object.keys(lineProduction).sort().map(key => {
-                            return <Grid item key={key} xs={6}>
-                                <Typography>
-                                    {key}: {Math.round(lineProduction[key]).toString().padStart(2, '0')}:{(Math.round((lineProduction[key] - Math.round(lineProduction[key])) * 60)).toString().padStart(2, '0')} H
-                                </Typography>
-                            </Grid>
-                        })
-                    }
-                </Grid>
-                <DialogActions>
-                    <Button
-                        sx={{
-                            color: "#fff",
-                            backgroundColor: "RGBA(255, 0, 0, 1)",
-                            "&:hover": {
-                                backgroundColor: "RGBA(255,0,0,0.8)"
-                            }
-                        }}
-                        onClick={() => { setLineStatistics(false) }}>
-                        Cerrar
-                    </Button>
-                </DialogActions>
-            </DialogContent>
-        </Dialog>
-        )
-    }
+
     const handleOnExport = async (referenceDay) => {
         console.log(`${process.env.REACT_APP_REST_BACKEND_URL}/${referenceDay}/getRows`)
         const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${referenceDay}/getRows`)
@@ -988,26 +969,7 @@ export default function PlaneacionPage(props) {
 
         setOpenSideBar(open);
     };
-    const handleLineStatistics = () => {
-        const tempLineProdcution = {
-            "LINE 1": 0,
-            "LINE 2": 0,
-            "LINE 3": 0,
-            "LINE 4": 0,
-            "LINE 5": 0,
-            "Vase L1": 0,
-            "Vase L2": 0,
-            "LINE 10 (eComerce)": 0,
-        }
-        rows.forEach(row => {
-            if (row.wo !== "" && row.wo in workOrders) {
-                console.log(row.wo + "   " + workOrders[row.wo].task)
-                tempLineProdcution[row.line] = (tempLineProdcution[row.line] === undefined ? 0 : tempLineProdcution[row.line]) + (Number(workOrders[row.wo].boxes) / productivities[workOrders[row.wo].task])
-            }
-        })
-        setLineProduction(tempLineProdcution)
-        setLineStatistics(true)
-    }
+
     const handleOnNewDay = async () => {
         handleOnExport("sameday")
         await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/newDay`)
@@ -1021,10 +983,10 @@ export default function PlaneacionPage(props) {
     return (
         <div style={{ overflowY: "hidden" }}>
             <>
-                {renderDialogProuctividadLineas()}
                 {renderDialogBuscarProducto()}
                 {renderDialogCrearRow()}
                 {renderDialogRecipe()}
+                <WetPackLineasComponent workOrders={workOrders} open={openWetPackDialog} onClose={() => { setOpenWetPackDialog(false) }} rows={rows} />
                 <Box sx={{
                     height: "95vh",
                     width: '100%',
@@ -1036,6 +998,17 @@ export default function PlaneacionPage(props) {
                         onOpen={toggleDrawer("bottom", true)}
                     >
                         <List>
+                            <ListItem sx={{
+                                display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
+                            }}>
+                                <ListItemButton
+                                    onClick={refreshItems}>
+                                    <ListItemIcon>
+                                        <SyncRoundedIcon />
+                                    </ListItemIcon>
+                                    <ListItemText>Refrescar Inventario</ListItemText>
+                                </ListItemButton>
+                            </ListItem>
                             <ListItem sx={{
                                 display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
                             }}>
@@ -1210,12 +1183,12 @@ export default function PlaneacionPage(props) {
                             gap: "1rem",
                             position: "absolute",
                             bottom: "6px",
-                            width: "max-content",
-                            left: "84%",
+                            width: "100vw",
                         }}>
                         <Fab
                             disabled={!(items !== undefined && workOrders !== undefined)}
                             sx={{
+                                marginLeft: "auto",
                                 backgroundColor: "#000",
                                 '&:hover': {
                                     backgroundColor: "rgba(0,0,0,0.6)"
@@ -1233,7 +1206,7 @@ export default function PlaneacionPage(props) {
                                     backgroundColor: Paleta.amarilloHover
                                 }
                             }}
-                            onClick={handleLineStatistics}
+                            onClick={() => { setOpenWetPackDialog(true) }}
                         >
                             <QueryStatsRoundedIcon />
                         </Fab>
