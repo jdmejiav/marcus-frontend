@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from "react"
 
 import IconButton from "@mui/material/IconButton";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import Grid from "@mui/material/Grid";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import OutlinedInput from "@mui/material/OutlinedInput";
@@ -21,24 +15,17 @@ import DataGridComponent from "../Components/DataGridComponent";
 import { w3cwebsocket as W3CWebSocket } from "websocket"
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
-import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 import moment from "moment";
-import Button from "@mui/material/Button";
 import { utils, writeFileXLSX } from 'xlsx';
 import { workOrdersFetch } from "../Components/WorkOrders";
 import { Roles } from "../util/RolesDiagram";
-import SwipeableDrawer from '@mui/material/SwipeableDrawer';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import KeyboardTabRoundedIcon from '@mui/icons-material/KeyboardTabRounded';
-import { Divider } from "@mui/material";
 import axios from "axios";
 import WetPackLineasComponent from "../Components/WetPackLineasComponent";
 import DialogRecipeComponent from "../Components/DialogRecipeComponent";
 import BotonesAdminComponent from "../Components/BotonesAdminComponent";
 import DialogCrearRowComponent from "../Components/DialogCrearRowComponent";
+import SettingsDrawerComponent from "../Components/SettingsDrawerComponent";
+import DialogBuscarProductoComponent from "../Components/DialogBuscarProductoComponent";
 
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
@@ -579,6 +566,11 @@ export default function PlaneacionPage(props) {
             hideable: Roles[rol].exit_order.hideable,
         },
         {
+            width: 110, field: "receiving_comment", headerName: "Comentario Receiving",
+            editable: Roles[rol].receiving_comment.edit,
+            hideable: Roles[rol].receiving_comment.hideable,
+        },
+        {
             width: 110, field: "turno", headerName: "Turno", type: "singleSelect",
             editable: Roles[rol].turno.edit,
             hideable: Roles[rol].turno.hideable,
@@ -695,47 +687,6 @@ export default function PlaneacionPage(props) {
 
         }
     }
-    const renderDialogBuscarProducto = () => {
-        return (
-            <Dialog maxWidth={false} open={dialogBuscar}>
-                <DialogTitle>{tempItem}</DialogTitle>
-                <DialogContent>
-                    {items === undefined ? <></> :
-                        tempItem.split(", ").map(productName => (
-                            items[productName] !== undefined ?
-                                <Grid key={productName} item style={{ margin: 10, display: "flex", flexDirection: "row", overflow: "auto" }} xs={12}>
-                                    {
-                                        Object.keys(items[productName]).map((name) => {
-                                            return (
-                                                <List key={name}>
-                                                    <ListItem key="po">PO: {items[productName][name].po}</ListItem>
-                                                    <ListItem key="boxType">Tipo: {items[productName][name].boxType}</ListItem>
-                                                    <ListItem key="age">Age: {items[productName][name].age}</ListItem>
-                                                    <ListItem key="cajas"># Cajas: {items[productName][name].numBoxes}</ListItem>
-                                                    <ListItem key="pack"># Pack: {items[productName][name].pack}</ListItem>
-                                                    <ListItem key="reference">Reference: {items[productName][name].reference}</ListItem>
-                                                </List>
-                                            )
-                                        })
-
-                                    }
-                                </Grid> : undefined))
-                    }
-                    <DialogActions>
-                        <Button sx={{
-                            color: "#fff",
-                            backgroundColor: "RGBA(255, 0, 0, 1)",
-                            "&:hover": {
-                                backgroundColor: "RGBA(255,0,0,0.8)"
-                            }
-                        }} onClick={() => { setDialogBuscar(false) }}>
-                            Cerrar
-                        </Button>
-                    </DialogActions>
-                </DialogContent>
-            </Dialog>
-        )
-    }
     const handleOnExport = async (referenceDay) => {
         const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${referenceDay}/getRows`)
             .then(res => res.data)
@@ -801,7 +752,7 @@ export default function PlaneacionPage(props) {
     return (
         <div style={{ overflowY: "hidden" }}>
             <>
-                {renderDialogBuscarProducto()}
+                <DialogBuscarProductoComponent open={dialogBuscar} onClose={() => { setDialogBuscar(false) }} product={tempItem} items={items} />
                 <DialogCrearRowComponent items={items} newProduct={newProduct} newCustomer={newCustomer} customers={customers} combo={combo} open={dialogAdd}
                     onCustomerChange={(e) => { setNewCustomer(e.target.value) }}
                     onClose={() => {
@@ -868,65 +819,14 @@ export default function PlaneacionPage(props) {
                     height: "95vh",
                     width: '100%',
                 }}>
-                    <SwipeableDrawer
-                        open={openSideBar}
-                        anchor="bottom"
-                        onClose={toggleDrawer("bottom", false)}
-                        onOpen={toggleDrawer("bottom", true)}
-                    >
-                        <List>
-                            <ListItem sx={{
-                                display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
-                            }}>
-                                <ListItemButton
-                                    onClick={refreshItems}>
-                                    <ListItemIcon>
-                                        <SyncRoundedIcon />
-                                    </ListItemIcon>
-                                    <ListItemText>Refrescar Inventario</ListItemText>
-                                </ListItemButton>
-                            </ListItem>
-                            <Divider />
-                            <ListItem sx={{
-                                display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
-                            }}>
-                                <ListItemButton
-                                    onClick={() => {
-                                        window.open('/recipes')
-                                    }}>
-                                    <ListItemIcon>
-                                        <CollectionsBookmarkIcon />
-                                    </ListItemIcon>
-                                    <ListItemText>Recetas</ListItemText>
-                                </ListItemButton>
-                            </ListItem>
-                            <Divider />
-                            <ListItem sx={{
-                                display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
-                            }}>
-                                <ListItemButton
-                                    onClick={handleOnNewDay}>
-                                    <ListItemIcon>
-                                        <KeyboardTabRoundedIcon />
-                                    </ListItemIcon>
-                                    <ListItemText>Cambio de día</ListItemText>
-                                </ListItemButton>
-                            </ListItem>
-                            <Divider />
-                            <ListItem>
-                                <ListItemButton
-                                    onClick={() => {
-                                        localStorage.clear()
-                                        window.location.href = "/login"
-                                    }}>
-                                    <ListItemIcon>
-                                        <LogoutRoundedIcon />
-                                    </ListItemIcon>
-                                    <ListItemText>Cerrar Sesión</ListItemText>
-                                </ListItemButton>
-                            </ListItem>
-                        </List>
-                    </SwipeableDrawer>
+                    <SettingsDrawerComponent openSideBar={openSideBar} onClose={toggleDrawer("bottom", false)} onOpen={toggleDrawer("bottom", true)} rol={rol} onRefreshInventory={refreshItems} onNewday={handleOnNewDay}
+                        onRecipes={() => {
+                            window.open('/recipes')
+                        }}
+                        onLogout={() => {
+                            localStorage.clear()
+                            window.location.href = "/login"
+                        }} />
 
                     <DataGridComponent
                         rows={rows}
