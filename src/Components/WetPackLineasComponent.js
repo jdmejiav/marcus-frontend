@@ -67,8 +67,8 @@ export default function WetPackLineasComponent(props) {
                         </ListItemText>
                     </ListItem>))}
             </Stack>
-            <Divider sx={{marginBottom: 3}}></Divider>
-            <Typography>Estimación horas</Typography>
+            <Divider sx={{ marginBottom: 3 }}></Divider>
+            <Typography>Estimación horas:</Typography>
             <Stack sx={{
                 "&": {
                     flexDirection: "row"

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react"
-import AddRoundedIcon from '@mui/icons-material/AddRounded';
+
 import IconButton from "@mui/material/IconButton";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
-import TextField from "@mui/material/TextField";
 import Grid from "@mui/material/Grid";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
@@ -14,12 +13,11 @@ import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import OutlinedInput from "@mui/material/OutlinedInput";
-import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import FormControl from '@mui/material/FormControl';
 import InputLabel from "@mui/material/InputLabel";
-import { DataGrid } from "@mui/x-data-grid";
+import DataGridComponent from "../Components/DataGridComponent";
 import { w3cwebsocket as W3CWebSocket } from "websocket"
 import DeleteRoundedIcon from '@mui/icons-material/DeleteRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
@@ -27,25 +25,20 @@ import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 import moment from "moment";
 import Button from "@mui/material/Button";
-import Fab from '@mui/material/Fab';
-import AddIcon from '@mui/icons-material/Add'
-import Paleta from "../util/Pallete";
-import Excel from '../images/excel-icon.svg'
-import { styleDataGrid } from "../Components/DataGridStyles";
 import { utils, writeFileXLSX } from 'xlsx';
 import { workOrdersFetch } from "../Components/WorkOrders";
-import QueryStatsRoundedIcon from '@mui/icons-material/QueryStatsRounded';
-import { Roles, RolesLineas, RolesBotones } from "../util/RolesDiagram";
+import { Roles } from "../util/RolesDiagram";
 import SwipeableDrawer from '@mui/material/SwipeableDrawer';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import KeyboardTabRoundedIcon from '@mui/icons-material/KeyboardTabRounded';
 import { Divider } from "@mui/material";
 import axios from "axios";
-import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
 import WetPackLineasComponent from "../Components/WetPackLineasComponent";
+import DialogRecipeComponent from "../Components/DialogRecipeComponent";
+import BotonesAdminComponent from "../Components/BotonesAdminComponent";
+import DialogCrearRowComponent from "../Components/DialogCrearRowComponent";
 
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
@@ -64,7 +57,7 @@ export default function PlaneacionPage(props) {
     const [dry, setDry] = useState(0)
     const [wet, setWet] = useState(0)
     const [openWetPackDialog, setOpenWetPackDialog] = useState(false)
-
+    const [combo, setCombo] = useState([])
     const [rows, setRows] = useState([])
     const [openSideBar, setOpenSideBar] = useState(false)
     const [tempItem, setTempItem] = useState("")
@@ -78,7 +71,6 @@ export default function PlaneacionPage(props) {
 
     const getRecipes = async () => {
         const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/getRecipes`).then(res => res.data).catch(err => console.log(err))
-        console.log(data)
         setRecipes(data)
     }
 
@@ -114,7 +106,6 @@ export default function PlaneacionPage(props) {
     })
     const fetchContent = async (day) => {
         const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/getRows`).then((res) => (res.data)).catch((err) => (console.log(err)));
-        console.log(data)
         setRows(data)
     }
     const handleOnRowChange = async (e) => {
@@ -257,8 +248,6 @@ export default function PlaneacionPage(props) {
                         count[key.charAt(key.length - 1)] = (count[key.charAt(key.length - 1)] === undefined ? Number.parseInt(cajas[key]) : Number.parseInt(count[key.charAt(key.length - 1)]) + Number.parseInt(cajas[key]))
                     ))
                     let qc = false
-
-
                     rowPayload.product.split(", ").forEach(productName => {
                         Object.keys(items[productName]).forEach(name => {
                             if (items[productName][name].reference.includes("QC")) {
@@ -269,8 +258,6 @@ export default function PlaneacionPage(props) {
                             }
                         })
                     })
-
-
                     if (qc) {
                         const tempCommentSplit = rowPayload.comment.split("|")
                         let tempComment = ""
@@ -339,18 +326,20 @@ export default function PlaneacionPage(props) {
                                 items === undefined ? <MenuItem value=""></MenuItem> :
                                     (params.row.product.split(", ").map(productName => (
                                         items[productName] !== undefined ?
-                                            (Object.keys(items[productName]).map((name) => (
-                                                <MenuItem
-                                                    key={items[productName][name].po + " Age: " + items[productName][name].age + ", " + items[productName][name].numBoxes + items[productName][name].boxType}
-                                                    value={items[productName][name].po + " Age: " + items[productName][name].age + ", " + items[productName][name].numBoxes + items[productName][name].boxType}
-                                                >
-                                                    <ListItemText key={items[productName][name].po + " Age: " + items[productName][name].age + ", "
-                                                        + items[productName][name].numBoxes + items[productName][name].boxType}>
-                                                        {items[productName][name].po + " Age: " + items[productName][name].age + ", " + items[productName][name].numBoxes +
-                                                            items[productName][name].boxType}
-                                                    </ListItemText>
-                                                </MenuItem>
-                                            )))
+                                            (Object.keys(items[productName]).map((name) => {
+                                                return (
+                                                    items[productName][name].po !== undefined ?
+                                                        <MenuItem
+                                                            key={items[productName][name].po + " Age: " + items[productName][name].age + ", " + items[productName][name].numBoxes + items[productName][name].boxType}
+                                                            value={items[productName][name].po + " Age: " + items[productName][name].age + ", " + items[productName][name].numBoxes + items[productName][name].boxType}
+                                                        >
+                                                            <ListItemText key={items[productName][name].po + " Age: " + items[productName][name].age + ", "
+                                                                + items[productName][name].numBoxes + items[productName][name].boxType}>
+                                                                {items[productName][name].po + " Age: " + items[productName][name].age + ", " + items[productName][name].numBoxes +
+                                                                    items[productName][name].boxType}
+                                                            </ListItemText>
+                                                        </MenuItem> : undefined)
+                                            }))
                                             :
                                             <MenuItem value=""></MenuItem>
                                     )
@@ -616,13 +605,11 @@ export default function PlaneacionPage(props) {
     ]
     const refreshItems = async () => {
         const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/refreshInventory`).then(res => res.data).catch(err => console.log(err))
-        console.log(info)
         setItems(info.items)
         setCustomers(info.customers)
     }
     const getItems = async () => {
         const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/fetchInventory`).then(res => res.data).catch(err => console.log(err))
-        console.log(info.items["BH EURO BQT WINTER"]["114079F"])
         setItems(info.items)
         setCustomers(info.customers)
     }
@@ -634,249 +621,68 @@ export default function PlaneacionPage(props) {
             }))
         }).catch(err => console.log(err))
     }
-    const renderDialogCrearRow = () => {
-
-        const [combo, setCombo] = useState([])
-
-        const handleAddRow = async () => {
-            if (newProduct !== "") {
-                var copyNewProduct = ""
-                if (combo.length > 0) {
-                    console.log("entra acá jje")
-                    let copy = [...combo]
-                    copy.push(newProduct)
-                    copy.sort()
-                    for (var i = 0; i < copy.length; i++) {
-                        if (i === copy.length - 1) {
-                            copyNewProduct = copyNewProduct + copy[i]
-                        } else {
-                            copyNewProduct = copyNewProduct + copy[i] + ", "
-                        }
+    const handleAddRow = async () => {
+        if (newProduct !== "") {
+            var copyNewProduct = ""
+            if (combo.length > 0) {
+                let copy = [...combo]
+                copy.push(newProduct)
+                copy.sort()
+                for (var i = 0; i < copy.length; i++) {
+                    if (i === copy.length - 1) {
+                        copyNewProduct = copyNewProduct + copy[i]
+                    } else {
+                        copyNewProduct = copyNewProduct + copy[i] + ", "
                     }
-                } else {
-                    copyNewProduct = newProduct
                 }
-
-                let row = {
-                    id: rows.length === 0 ? 1 : rows[rows.length - 1].id + 1,
-                    actions: "",
-                    date: new Date(),
-                    customer: newCustomer,
-                    product: copyNewProduct,
-                    po: [],
-                    poDescription: {},
-                    dry_boxes: {},
-                    pull_date: "",
-                    //wet_pack: 0,
-                    comment: "",
-                    priority: "",
-                    wo: "",
-                    //exit_order: null,
-                    line: "",
-                    turno: "Morning",
-                    assigned: "",
-                    made: "",
-                    order_status: "",
-                    scan_status: "",
-                    box_code: "",
-                    hargoods: "",
-                    hargoods_status: "Pendiente por entregar",
-                }
-                const data = await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/addRow`, row).then(res => res.data).catch(err => console.log(err));
-                client.send(
-                    JSON.stringify({
-                        day: props.day,
-                        type: "update",
-                        _id: data._id,
-                    })
-                )
-
+            } else {
+                copyNewProduct = newProduct
             }
+            let date = new Date()
+            if (props.day === "nextday") {
+                date.setDate(date.getDate() + 1)
+            }
+            console.log(props.day)
+            console.log(date)
+            let row = {
+                id: rows.length === 0 ? 1 : rows[rows.length - 1].id + 1,
+                actions: "",
+                date: moment(date).format("L"),
+                customer: newCustomer,
+                product: copyNewProduct,
+                po: [],
+                poDescription: {},
+                dry_boxes: {},
+                pull_date: "",
+                //wet_pack: 0,
+                comment: "",
+                priority: "",
+                wo: "",
+                //exit_order: null,
+                line: "",
+                turno: "Morning",
+                assigned: "",
+                made: "",
+                order_status: "",
+                scan_status: "",
+                box_code: "",
+                hargoods: "",
+                hargoods_status: "Pendiente por entregar",
+            }
+            const data = await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/addRow`, row).then(res => res.data).catch(err => console.log(err));
+            client.send(
+                JSON.stringify({
+                    day: props.day,
+                    type: "update",
+                    _id: data._id,
+                })
+            )
+
         }
-        return (
-
-            <Dialog onClose={() => { setDialogAdd(false) }} maxWidth open={dialogAdd}>
-                <DialogTitle>Añadir fila</DialogTitle>
-                <DialogContent>
-                    <Box style={{ width: "50vw", paddingTop: 10 }}>
-                        <Grid container spacing={4}>
-                            <Grid item xs={6}>
-                                <Autocomplete
-                                    id="product-autocomplete"
-                                    onChange={(_, value) => {
-                                        if (value !== null) {
-                                            setNewCustomer(items[value.label] !== undefined ? items[value.label][Object.keys(items[value.label])[0]].customer : "")
-                                            setNewProduct(value.label)
-                                        } else {
-                                            setNewCustomer("")
-                                            setNewProduct("")
-                                        }
-                                    }}
-                                    options={items !== undefined ?
-                                        Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : {}}
-
-                                    renderInput={(params) => <TextField fullWidth {...params} value={newProduct} label="Product" />} />
-                            </Grid>
-                            <Grid item xs={5}>
-                                <FormControl fullWidth>
-                                    <InputLabel id="customer-label">Customer</InputLabel>
-                                    <Select
-
-                                        labelId="customer-label"
-                                        id="customer-select"
-                                        value={newCustomer}
-                                        label="Customer"
-                                        onChange={(e) => { setNewCustomer(e.target.value) }}
-                                    >
-                                        {
-                                            customers.sort().map((item) => (
-                                                <MenuItem key={item} value={item}>{item}</MenuItem>)
-                                            )
-                                        }
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={1}>
-                                <ListItemButton onClick={() => {
-                                    let copy = [...combo]
-                                    copy.push("")
-                                    setCombo(copy)
-                                }} sx={{ height: "100%" }}>
-                                    <ListItemIcon sx={{ height: "100%" }}>
-                                        <AddRoundedIcon sx={{ height: "100%" }} />
-                                    </ListItemIcon>
-                                </ListItemButton>
-                            </Grid>
-                        </Grid>
-                        {
-                            combo.map((item, idx) => (
-                                <Grid sx={{ mt: 1, mb: 1 }} key={idx} container spacing={4}>
-                                    <Grid item xs={6}>
-                                        <Autocomplete
-                                            id="product-autocomplete"
-                                            onChange={(_, value) => {
-                                                if (value !== null) {
-                                                    let copy = [...combo]
-                                                    copy[idx] = value.label
-                                                    setCombo(copy)
-                                                } else {
-                                                    setNewCustomer("")
-                                                    setNewProduct("")
-                                                }
-                                            }}
-                                            options={items !== undefined ?
-                                                Object.keys(items).sort().map((product, idx) => ({ "label": product, id: idx })) : {}}
-
-                                            renderInput={(params) => <TextField fullWidth {...params} value={item} label="Product" />} />
-                                    </Grid>
-                                    <Grid item xs={5}></Grid>
-                                    <Grid item xs={1}>
-                                        <ListItemButton onClick={() => {
-                                            let copy = [...combo]
-                                            copy.splice(idx, 1)
-                                            setCombo(copy)
-                                        }} sx={{ height: "100%" }}>
-                                            <ListItemIcon sx={{ height: "100%" }}>
-                                                <RemoveRoundedIcon sx={{ height: "100%" }} />
-                                            </ListItemIcon>
-                                        </ListItemButton>
-                                    </Grid>
-                                </Grid>
-                            )
-                            )
-                        }
-                        <DialogActions>
-                            <Button variant="contianed" sx={{
-                                color: "#fff",
-                                backgroundColor: "RGBA(255, 0, 0, 1)",
-                                "&:hover": {
-                                    backgroundColor: "RGBA(255,0,0,0.8)"
-                                }
-                            }} onClick={() => { setDialogAdd(false) }}>
-                                Cerrar
-                            </Button>
-                            <Button
-                                sx={{
-                                    color: "#fff",
-                                    backgroundColor: "RGBA(152, 208, 70, 1)",
-                                    "&:hover": {
-                                        backgroundColor: "RGBA(152, 208, 70, 0.8)"
-                                    }
-                                }}
-                                variant="contianed" onClick={() => {
-                                    handleAddRow()
-                                    setDialogAdd(false)
-                                    if (!(newProduct in recipes)) {
-                                        setDialogRecipe(true)
-                                    }
-                                }}>
-                                Añadir
-                            </Button>
-                        </DialogActions>
-
-                    </Box>
-                </DialogContent>
-            </Dialog>
-        )
     }
-
-
-    const renderDialogRecipe = () => {
-        return (
-            <Dialog onClose={() => { setDialogRecipe(false) }} maxWidth={false} open={dialogRecipe}>
-                <DialogTitle>
-                    Receta: {newProduct}
-                </DialogTitle>
-                <DialogContent >
-                    <Box style={{ width: "50vw", paddingTop: 10 }}>
-
-                        <Grid container spacing={4}>
-                            <Grid item xs={6}>
-                                <TextField onChange={(e) => { setWet(e.target.value) }} value={wet} fullWidth type="number" id="outlined-basic" label="Wet" variant="outlined" />
-                            </Grid>
-                            <Grid item xs={6}>
-                                <TextField onChange={(e) => { setDry(e.target.value) }} value={dry} fullWidth type="number" id="outlined-basic" label="Dry" variant="outlined" />
-                            </Grid>
-                        </Grid>
-                        <DialogActions>
-                            <Button variant="contianed" sx={{
-                                color: "#fff",
-                                backgroundColor: "RGBA(255, 0, 0, 1)",
-                                "&:hover": {
-                                    backgroundColor: "RGBA(255,0,0,0.8)"
-                                }
-                            }} onClick={() => { setDialogRecipe(false) }}>
-                                Cerrar
-                            </Button>
-                            <Button
-                                sx={{
-                                    color: "#fff",
-                                    backgroundColor: "RGBA(152, 208, 70, 1)",
-                                    "&:hover": {
-                                        backgroundColor: "RGBA(152, 208, 70, 0.8)"
-                                    }
-                                }}
-                                variant="contianed"
-                                onClick={async () => {
-                                    await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/addRecipe`, { product: newProduct, wp: wet, dry: dry })
-                                    setDialogRecipe(false)
-                                    setWet(0)
-                                    setDry(0)
-                                    getRecipes()
-                                }}>
-                                Añadir
-                            </Button>
-                        </DialogActions>
-                    </Box>
-                </DialogContent >
-            </Dialog>
-        )
-    }
-
-
     const renderDialogBuscarProducto = () => {
         return (
-            <Dialog maxWidth={false} open={dialogBuscar}>
+            <Dialog maxWidth open={dialogBuscar}>
                 <DialogTitle>{tempItem}</DialogTitle>
                 <DialogContent>
                     {items === undefined ? <></> :
@@ -911,18 +717,14 @@ export default function PlaneacionPage(props) {
                             Cerrar
                         </Button>
                     </DialogActions>
-
                 </DialogContent>
             </Dialog>
         )
     }
-
     const handleOnExport = async (referenceDay) => {
-        console.log(`${process.env.REACT_APP_REST_BACKEND_URL}/${referenceDay}/getRows`)
         const data = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${referenceDay}/getRows`)
             .then(res => res.data)
             .catch(err => console.log(err))
-        console.log(data)
         let objectMaxLength = Array(21).fill(10)
         let bodyTemp = data.map(item => {
             const tempRetorno = JSON.parse(JSON.stringify(item))
@@ -969,10 +771,11 @@ export default function PlaneacionPage(props) {
 
         setOpenSideBar(open);
     };
-
     const handleOnNewDay = async () => {
         handleOnExport("sameday")
-        await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/newDay`)
+        await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/newDay`).then(async res => {
+            refreshItems()
+        })
         client.send(
             JSON.stringify({
                 day: props.day,
@@ -984,8 +787,64 @@ export default function PlaneacionPage(props) {
         <div style={{ overflowY: "hidden" }}>
             <>
                 {renderDialogBuscarProducto()}
-                {renderDialogCrearRow()}
-                {renderDialogRecipe()}
+                <DialogCrearRowComponent items={items} newProduct={newProduct} newCustomer={newCustomer} customers={customers} combo={combo} open={dialogAdd}
+                    onCustomerChange={(e) => { setNewCustomer(e.target.value) }}
+                    onClose={() => {
+                        setDialogAdd(false);
+                        setCombo([])
+                    }}
+                    onProductChange={(_, value) => {
+                        if (value !== null) {
+                            setNewCustomer(items[value.label] !== undefined ? items[value.label][Object.keys(items[value.label])[0]].customer : "")
+                            setNewProduct(value.label)
+                        } else {
+                            setNewCustomer("")
+                            setNewProduct("")
+                        }
+                    }}
+                    onAddCombo={() => {
+                        let copy = [...combo]
+                        copy.push("")
+                        setCombo(copy)
+                    }}
+                    onProductChangeCombo={(value, idx) => {
+                        if (value !== null) {
+                            let copy = [...combo]
+                            copy[idx] = value.label
+                            setCombo(copy)
+                        } else {
+                            setNewCustomer("")
+                            setNewProduct("")
+                        }
+                    }}
+                    onDeleteCombo={(idx) => {
+                        let copy = [...combo]
+                        copy.splice(idx, 1)
+                        setCombo(copy)
+                    }}
+                    onAddRecipe={() => {
+                        handleAddRow()
+                        setDialogAdd(false)
+                        if (!(newProduct in recipes)) {
+                            setDialogRecipe(true)
+                        }
+                    }}
+                />
+                <DialogRecipeComponent
+                    dry={dry} wet={wet} open={dialogRecipe} onDryChange={(e) => setDry(e.target.value)} onWetChange={(e) => { setWet(e.target.value) }} newProduct={newProduct}
+                    onClose={() => {
+                        setWet(0)
+                        setDry(0)
+                        setDialogRecipe(false)
+                    }}
+                    onAddRecipe={async () => {
+                        await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/addRecipe`, { product: newProduct, wp: wet, dry: dry })
+                        setDialogRecipe(false)
+                        setWet(0)
+                        setDry(0)
+                        getRecipes()
+                    }}
+                />
                 <WetPackLineasComponent workOrders={workOrders} open={openWetPackDialog} onClose={() => { setOpenWetPackDialog(false) }} rows={rows} />
                 <Box sx={{
                     height: "95vh",
@@ -1009,6 +868,7 @@ export default function PlaneacionPage(props) {
                                     <ListItemText>Refrescar Inventario</ListItemText>
                                 </ListItemButton>
                             </ListItem>
+                            <Divider />
                             <ListItem sx={{
                                 display: (rol === 'planeacion' || rol === 'admin' ? 'inline-flex' : 'none')
                             }}>
@@ -1049,125 +909,16 @@ export default function PlaneacionPage(props) {
                             </ListItem>
                         </List>
                     </SwipeableDrawer>
-                    <DataGrid
-                        aria-label="Marco"
-                        columnVisibilityModel={{
-                            _id: false
-                        }}
-                        loading={!(items !== undefined && workOrders !== undefined)}
-                        initialState={
-                            {
-                                columns: {
-                                    columnVisibilityModel: {
-                                        columnVisibilityModel: {
-                                            id: Roles[rol].id.view,
-                                            _id: false,
-                                            actions: Roles[rol].actions.view,
-                                            date: Roles[rol].date.view,
-                                            customer: Roles[rol].customer.view,
-                                            product: Roles[rol].product.view,
-                                            po: Roles[rol].po.view,
-                                            poDescription: Roles[rol].poDescription.view,
-                                            dry_boxes: Roles[rol].dry_boxes.view,
-                                            pull_date: Roles[rol].pull_date.view,
-                                            wet_pack: Roles[rol].wet_pack.view,
-                                            comment: Roles[rol].comment.view,
-                                            priority: Roles[rol].priority.view,
-                                            wo: Roles[rol].wo.view,
-                                            exit_order: Roles[rol].exit_order.view,
-                                            line: Roles[rol].line.view,
-                                            turno: Roles[rol].turno.view,
-                                            assigned: Roles[rol].assigned.view,
-                                            made: Roles[rol].made.view,
-                                            order_status: Roles[rol].order_status.view,
-                                            scan_status: Roles[rol].scan_status.view,
-                                            box_code: Roles[rol].box_code.view,
-                                            hargoods: Roles[rol].hargoods.view,
-                                            hargoods_status: Roles[rol].hargoods_status.view,
-                                        }
-                                    }
-                                },
-                                filter: {
-                                    filterModel: (
-                                        rol in RolesLineas ? {
-                                            items: [
-                                                {
-                                                    columnField: "line",
-                                                    operatorValue: "is",
-                                                    value: rol
-                                                }
-                                            ]
-                                        } : {
-                                            items: [
-                                                {}
-                                            ]
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        sx={styleDataGrid}
-                        getRowHeight={() => 'auto'}
-                        pageSize={100}
-                        rowsPerPageOptions={[100]}
-                        disableSelectionOnClick
-                        onCellEditCommit={(e) => { handleOnRowChange(e) }}
+
+                    <DataGridComponent
                         rows={rows}
                         columns={columns}
-                        getCellClassName={(params) => {
-                            switch (params.field) {
-                                case "order_status":
-                                    if (params.value === "ARMADO") {
-                                        return 'orderStatusArmadoCell'
-                                    } else if (params.value === "NO ARMADO") {
-                                        return 'orderStatusNoArmadoCell'
-                                    } else if (params.value === "EN PROCESO") {
-                                        return 'orderStatusEnProcesoCell';
-                                    }
-                                    break;
-                                case "scan_status":
-                                    if (params.value === "ESCANEADO") {
-                                        return 'scanStatusEscaneadoCell'
-                                    } else if (params.value === "NO ESCANEADO") {
-                                        return 'scanStatusNoEscaneadoCell'
-                                    }
-                                    break;
-                                case "priority":
-                                    if (params.row.priority === "Prioridad 1") {
-                                        return 'prioridad1Cell'
-                                    } else if (params.value === "Prioridad 2") {
-                                        return 'prioridad2Cell'
-                                    } else if (params.value === "Prioridad 3") {
-                                        return 'prioridad3Cell';
-                                    } else if (params.value === "Pausada") {
-                                        return 'pausadaCell';
-                                    }
-                                    break;
-                                case "hargoods":
-                                    if (params.value === "Disponible") {
-                                        return 'hargoodsDisponibleCell'
-                                    } else if (params.value === "No en inventario") {
-                                        return 'hargoodsNoeninventarioCell'
-                                    }
-                                    break;
-                                case "hargoods_status":
-                                    if (params.value === "Entregado") {
-                                        return 'hargoodsStatusEntregadoCell'
-                                    } else if (params.value === "Pendiente por entregar") {
-                                        return 'hargoodsStatusPendientePorEntregarCell'
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-                            if (params.row.priority === "Prioridad 1") {
-                                return "prioridad1"
-                            } else if (params.row.priority === "Pausada") {
-                                return "pausada"
-                            }
-                        }}
+                        items={items}
+                        workOrders={workOrders}
+                        onRowchange={(e) => handleOnRowChange(e)}
+                        rol={rol}
                     >
-                    </DataGrid>
+                    </DataGridComponent>
                     <Typography sx={{
                         position: "Sticky",
                         bottom: "5px",
@@ -1176,69 +927,15 @@ export default function PlaneacionPage(props) {
                     }}>
                         Total WetPacks: {rows.map(row => row.wet_pack).reduce((partialSum, a) => partialSum + (a === undefined ? 0 : Math.round(a * 100) / 100), 0)}
                     </Typography>
-                    <div
-                        style={{
-                            display: (rol in RolesBotones ? "flex" : "none"),
-                            flexDirection: "row",
-                            gap: "1rem",
-                            position: "absolute",
-                            bottom: "6px",
-                            width: "100vw",
-                        }}>
-                        <Fab
-                            disabled={!(items !== undefined && workOrders !== undefined)}
-                            sx={{
-                                marginLeft: "auto",
-                                backgroundColor: "#000",
-                                '&:hover': {
-                                    backgroundColor: "rgba(0,0,0,0.6)"
-                                }
-                            }}
-                            onClick={handleOpenSideBar}
-                        >
-                            <SettingsRoundedIcon sx={{ color: "#fff" }} />
-                        </Fab>
-                        <Fab
-                            disabled={!(items !== undefined && workOrders !== undefined)}
-                            sx={{
-                                backgroundColor: Paleta.amarillo,
-                                '&:hover': {
-                                    backgroundColor: Paleta.amarilloHover
-                                }
-                            }}
-                            onClick={() => { setOpenWetPackDialog(true) }}
-                        >
-                            <QueryStatsRoundedIcon />
-                        </Fab>
-                        <Fab
-                            disabled={!(items !== undefined && workOrders !== undefined)}
-                            sx={{ backgroundColor: "#fff" }}
-                            onClick={() => {
-                                handleOnExport(props.day)
-                            }}
-                        >
-                            <img
-                                alt="Excel"
-                                style={{
-                                    opacity: (items !== undefined && workOrders !== undefined ? 1 : 0.1),
-                                    color: "#fff",
-                                    height: "30px",
-                                    width: "30px"
-                                }}
-                                src={Excel}></img>
-                        </Fab>
-                        <Fab
-                            disabled={!(items !== undefined && workOrders !== undefined)}
-                            sx={{ backgroundColor: Paleta.azulOscuro }}
-                            style={{
-                                marginRight: "1rem"
-                            }} onClick={() => {
-                                setNewCustomer("")
-                                setDialogAdd(true)
-                            }} color="primary" aria-label="add">
-                            <AddIcon />
-                        </Fab>
-                    </div>
+                    <BotonesAdminComponent
+                        items={items} workOrders={workOrders} onOpenSideBar={handleOpenSideBar} rol={rol}
+                        onWetPacksInfo={() => { setOpenWetPackDialog(true) }}
+                        onExport={() => { handleOnExport(props.day) }}
+                        onAdd={() => {
+                            setNewCustomer("")
+                            setDialogAdd(true)
+                        }}
+                    />
                 </Box>
             </>
         </div >
