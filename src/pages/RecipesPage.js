@@ -36,7 +36,7 @@ const RecipesPage = () => {
 
     }, [])
     const getItems = async () => {
-        const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/fetchInventory`).then(res => { console.log(res.data); return res.data; }).catch(err => console.log(err))
+        const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/fetchInventory`).then(res => { return res.data; }).catch(err => console.log(err))
         setItems(info.items)
         console.log(items)
     }
@@ -144,6 +144,15 @@ const RecipesPage = () => {
                     marginRight: "1rem"
                 }} color="primary" aria-label="add">
                 <AddIcon />
+            </Fab>
+            <Fab
+                onClick={() => console.log(items !== undefined ?
+                    Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : [])}
+                sx={{ backgroundColor: Paleta.azulOscuro }}
+                style={{
+                    marginRight: "1rem"
+                }} color="primary" aria-label="add">
+                aaaaa
             </Fab>
         </div>
     </Box >

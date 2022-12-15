@@ -50,7 +50,7 @@ export default function WetPackLineasComponent(props) {
         })
         setSetWetPacks(tempWetpack)
     }, [open])
-    return <Dialog maxWidth onClose={onClose} open={open}>
+    return <Dialog maxWidth={false} onClose={onClose} open={open}>
         <DialogTitle>
             # Wetpack Líneas
         </DialogTitle>

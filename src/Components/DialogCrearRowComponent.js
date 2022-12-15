@@ -20,10 +20,10 @@ import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
 export default function DialogCrearRowComponent(props) {
     const { items, newProduct, newCustomer, customers, combo, open, onClose, onProductChange, onCustomerChange, onAddCombo, onProductChangeCombo, onDeleteCombo, onAddRecipe } = props
 
-    return <Dialog onClose={onClose} maxWidth open={open}>
+    return <Dialog onClose={onClose} maxWidth={false} open={open}>
         <DialogTitle>Añadir fila</DialogTitle>
         <DialogContent>
-            
+
             <Box style={{ width: "50vw", paddingTop: 10 }}>
                 <Grid container spacing={4}>
                     <Grid item xs={6}>
@@ -31,7 +31,7 @@ export default function DialogCrearRowComponent(props) {
                             id="product-autocomplete"
                             onChange={onProductChange}
                             options={items !== undefined ?
-                                Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : {}}
+                                Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : []}
                             renderInput={(params) => <TextField fullWidth {...params} value={newProduct} label="Product" />} />
                     </Grid>
                     <Grid item xs={5}>

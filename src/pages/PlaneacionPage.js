@@ -422,8 +422,24 @@ export default function PlaneacionPage(props) {
                                                 params.row.comment = params.row.comment.replace("| Quality Check", '')
                                             }
                                             params.row.dry_boxes = count
+                                            const wetValue = () => {
+                                                let tempDry = 0
+                                                params.row.product.split(", ").forEach(productName => {
+                                                    Object.keys(params.value).forEach((key) => {
+                                                        let tempPo = key.split(" ")[0] + key.charAt(key.length - 1)
+                                                        if (items[productName][tempPo] !== undefined) {
+                                                            let pack = items[productName][tempPo].pack
+                                                            let packWet = recipes[productName].wp
+                                                            tempDry = tempDry + (Math.round(((pack * params.value[key]) / packWet) * 100) / 100)
+                                                        }
+                                                    })
+                                                })
+                                                return tempDry
+                                            }
+                                            params.row.wet_pack = wetValue()
                                         }
                                         const updateRow = async (e) => {
+
                                             await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/updateRow/${params.row._id}`, params.row)
                                                 .then(res => res.data)
                                                 .catch(err => console.log(err))
@@ -480,6 +496,7 @@ export default function PlaneacionPage(props) {
                             }
                         })
                     })
+
                     return tempDry
                 }
                 return <List>
@@ -642,8 +659,6 @@ export default function PlaneacionPage(props) {
             if (props.day === "nextday") {
                 date.setDate(date.getDate() + 1)
             }
-            console.log(props.day)
-            console.log(date)
             let row = {
                 id: rows.length === 0 ? 1 : rows[rows.length - 1].id + 1,
                 actions: "",
@@ -682,13 +697,13 @@ export default function PlaneacionPage(props) {
     }
     const renderDialogBuscarProducto = () => {
         return (
-            <Dialog maxWidth open={dialogBuscar}>
+            <Dialog maxWidth={false} open={dialogBuscar}>
                 <DialogTitle>{tempItem}</DialogTitle>
                 <DialogContent>
                     {items === undefined ? <></> :
                         tempItem.split(", ").map(productName => (
                             items[productName] !== undefined ?
-                                <Grid item style={{ margin: 10, display: "flex", flexDirection: "row", overflow: "auto" }} xs={12}>
+                                <Grid key={productName} item style={{ margin: 10, display: "flex", flexDirection: "row", overflow: "auto" }} xs={12}>
                                     {
                                         Object.keys(items[productName]).map((name) => {
                                             return (
@@ -704,7 +719,7 @@ export default function PlaneacionPage(props) {
                                         })
 
                                     }
-                                </Grid> : <></>))
+                                </Grid> : undefined))
                     }
                     <DialogActions>
                         <Button sx={{
@@ -795,8 +810,11 @@ export default function PlaneacionPage(props) {
                     }}
                     onProductChange={(_, value) => {
                         if (value !== null) {
-                            setNewCustomer(items[value.label] !== undefined ? items[value.label][Object.keys(items[value.label])[0]].customer : "")
                             setNewProduct(value.label)
+                            try {
+                                setNewCustomer(items[value.label] !== undefined ? items[value.label][Object.keys(items[value.label])[0]].customer : "")
+                            } catch (e) { }
+
                         } else {
                             setNewCustomer("")
                             setNewProduct("")
