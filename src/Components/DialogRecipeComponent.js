@@ -9,6 +9,21 @@ import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
 
 
+/**
+ * 
+ * @param {{
+ * dry: number
+ * wet: number
+ * open: boolean
+ * onClose: function
+ * newProduct: string
+ * onDryChange: function
+ * onWetChange: function
+ * onAddRecipe: function
+ * children: React.Component
+ * }} props 
+ * @returns 
+ */
 export default function DialogRecipeComponent(props) {
     const { dry, wet, open, onClose, newProduct, onDryChange, onWetChange, onAddRecipe, children } = props;
     return <Dialog onClose={onClose} maxWidth={false} open={open}>

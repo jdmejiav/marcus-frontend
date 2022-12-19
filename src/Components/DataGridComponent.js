@@ -3,10 +3,21 @@ import { DataGrid } from "@mui/x-data-grid";
 import { Roles, RolesLineas } from "../util/RolesDiagram";
 import { styleDataGrid } from "./DataGridStyles";
 
+
+/**
+ * 
+ * @param {{
+ *  rows: array
+ *  columns: array
+ *  items: object
+ *  workOrders: object
+ *  onRowchange: function
+ *  rol: string
+ * }} props Props for the component
+ * @returns React.
+ */
 export default function DataGridComponent(props) {
     const { rows, columns, items, workOrders, onRowchange, rol } = props
-
-
     return <DataGrid
         aria-label="Marco"
         columnVisibilityModel={{

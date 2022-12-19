@@ -17,7 +17,26 @@ import ListItemButton from "@mui/material/ListItemButton";
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
 
+/**
+ * @param {{
+ *  items: object
+ *  newProduct: string
+ *  newCustomer: string
+ *  combo: array
+ *  open: boolean
+ *  onClose: function
+ *  onProductChange: function
+ *  onCustomerChange: function
+ *  onAddCombo: function
+ *  onProductChange: function
+ *  onDeleteCombo: function
+ *  onAddRecipe: function
+ * }} props 
+ * @returns 
+ */
+
 export default function DialogCrearRowComponent(props) {
+
     const { items, newProduct, newCustomer, customers, combo, open, onClose, onProductChange, onCustomerChange, onAddCombo, onProductChangeCombo, onDeleteCombo, onAddRecipe } = props
 
     return <Dialog onClose={onClose} maxWidth={false} open={open}>

@@ -8,6 +8,16 @@ import ListItem from "@mui/material/Grid";
 import DialogActions from "@mui/material/Grid";
 import Button from "@mui/material/Grid";
 
+/**
+ * 
+ * @param {{
+ * open: boolean
+ * onClose: function
+ * product: string
+ * items: object
+ * }} props Props for the application
+ * @returns 
+ */
 export default function DialogBuscarProductoComponent(props) {
 
     const { open, onClose, product, items } = props

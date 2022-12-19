@@ -1,5 +1,8 @@
 import Paleta from "../util/Pallete"
 
+/**
+ * sx Styles for the DataGrdid Component
+ */
 export const styleDataGrid = {
     /*
     '& .MuiDataGrid-footerContainer': {

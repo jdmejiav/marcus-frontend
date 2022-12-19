@@ -10,6 +10,8 @@ import ListItemText from "@mui/material/ListItemText";
 import { productivities } from "../util/Productivities";
 import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
+
+
 export default function WetPackLineasComponent(props) {
     const { open, onClose, rows, workOrders } = props
     const [wetPacks, setSetWetPacks] = useState({})
@@ -46,8 +48,12 @@ export default function WetPackLineasComponent(props) {
         handleLineStatistics()
         let tempWetpack = {}
         rows.forEach(row => {
-            tempWetpack[row.line] = tempWetpack[row.line] === undefined ? row.wet_pack : tempWetpack[row.line] + row.wet_pack
+            if (row.line !== "") {
+                tempWetpack[row.line] = tempWetpack[row.line] === undefined ? row.wet_pack : tempWetpack[row.line] + row.wet_pack
+            }
         })
+        console.log(tempWetpack)
+        console.log(typeof open)
         setSetWetPacks(tempWetpack)
     }, [open])
     return <Dialog maxWidth={false} onClose={onClose} open={open}>
@@ -60,12 +66,7 @@ export default function WetPackLineasComponent(props) {
                     flexDirection: "row"
                 }
             }}>
-                {Object.keys(wetPacks).sort().map(line => (
-                    <ListItem key={line}>
-                        <ListItemText>
-                            <b>{line}:</b> {wetPacks[line]} wp
-                        </ListItemText>
-                    </ListItem>))}
+                {Object.keys(wetPacks).sort().map(line => (<></>))}
             </Stack>
             <Divider sx={{ marginBottom: 3 }}></Divider>
             <Typography>Estimación horas:</Typography>

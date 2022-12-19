@@ -1,3 +1,7 @@
+
+/**
+ * Color pallete for the application
+ */
 const Paleta = {
     amarillo: "RGBA(255,165,55,1)",
     amarilloHover: "RGBA(255,165,55,0.6)",

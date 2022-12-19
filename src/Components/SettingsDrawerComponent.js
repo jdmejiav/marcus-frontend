@@ -12,6 +12,20 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import KeyboardTabRoundedIcon from '@mui/icons-material/KeyboardTabRounded';
 
+/**
+ * 
+ * @param {{
+ *  openSideBar: boolean
+ *  onClose: function
+ *  onOpen: boolean
+ *  rol: string
+ *  onRefreshInventory: function
+ *  onRecipes: function
+ *  onNewDay: function
+ *  onLogout: function
+ * }}} props 
+ * @returns 
+ */
 export default function SettingsDrawerComponent(props) {
     const { openSideBar, onClose, onOpen, rol, onRefreshInventory, onRecipes, onNewDay, onLogout } = props
 

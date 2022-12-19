@@ -12,6 +12,10 @@ import axios from 'axios'
 import Typography from '@mui/material/Typography'
 import BouquetImage from "../images/bouquet-collection.png"
 
+/**
+ * Login Page
+ * @returns JSX.Element
+ */
 export default function LoginPage() {
     useEffect(() => {
         if (localStorage.getItem("token") != null) {
@@ -60,7 +64,6 @@ export default function LoginPage() {
                 backgroundColor: Paleta.azulOscuro,
 
             }} >
-
             <Box
                 sx={{
                     '&': {
@@ -116,7 +119,7 @@ export default function LoginPage() {
                         {message}
                     </Alert>
                 </Collapse>
-                
+
                 <Box sx={{
                     borderRadius: "30px",
                     width: "25vw",
@@ -125,23 +128,23 @@ export default function LoginPage() {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    
+
                 }}>
-                    <Typography sx={{color:"#fff", fontSize:"60px", fontWeight:"600", fontFamily:"Archivo, sans-serif"}}>
+                    <Typography sx={{ color: "#fff", fontSize: "60px", fontWeight: "600", fontFamily: "Archivo, sans-serif" }}>
                         MARCUS
                     </Typography>
                     <img style={{
-                        marginTop:"1rem",
-                        width:"130px",
-                        height:"auto",
-                        
+                        marginTop: "1rem",
+                        width: "130px",
+                        height: "auto",
+
                     }} src={BouquetImage} alt="bouquet-logo"></img>
-                    
+
                     <form onSubmit={(event) => {
                         event.preventDefault()
                         handleOnLogin();
                     }}>
-                        
+
                         <TextField
                             sx={{
                                 "& input": { color: "#fff" },

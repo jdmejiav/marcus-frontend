@@ -21,8 +21,14 @@ import DialogRecipeComponent from "../Components/DialogRecipeComponent";
 
 import Autocomplete from "@mui/material/Select";
 
-const RecipesPage = () => {
+/**
+ * Page to see and edit the wetpacks recipes
+ */
 
+const RecipesPage = () => {
+    /**
+     * @property {object} 0 - Recipes object dry, and wp keys
+     */
     const [recipes, setRecipes] = useState(undefined)
     const [dialogAddRecipe, setDialogAddRecipe] = useState(false)
     const [dry, setDry] = useState(0)

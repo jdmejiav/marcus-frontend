@@ -6,6 +6,22 @@ import Paleta from "../util/Pallete";
 import Excel from '../images/excel-icon.svg'
 import QueryStatsRoundedIcon from '@mui/icons-material/QueryStatsRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+
+/**
+ * 
+ * @param {{
+ *  items: object
+ *  workOrders: object
+ *  onOpenSideBar: function
+ *  onWetPacksInfo: function
+ *  onExport: function
+ *  onAdd: function
+ *  rol: string
+ * }} props Props for the component
+ * @returns 
+ */
+
+
 export default function BotonesAdminComponent(props) {
     const { items, workOrders, onOpenSideBar, onWetPacksInfo, onExport, onAdd, rol } = props
 

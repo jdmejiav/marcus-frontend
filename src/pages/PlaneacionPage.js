@@ -814,7 +814,7 @@ export default function PlaneacionPage(props) {
                         getRecipes()
                     }}
                 />
-                <WetPackLineasComponent workOrders={workOrders} open={openWetPackDialog} onClose={() => { setOpenWetPackDialog(false) }} rows={rows} />
+                <WetPackLineasComponent open={openWetPackDialog} workOrders={workOrders} onClose={() => { setOpenWetPackDialog(false) }} rows={rows} />
                 <Box sx={{
                     height: "95vh",
                     width: '100%',
@@ -839,15 +839,14 @@ export default function PlaneacionPage(props) {
                     </DataGridComponent>
                     <Typography sx={{
                         position: "Sticky",
-                        bottom: "5px",
+                        bottom: "3vh",
                         marginLeft: "10px"
 
                     }}>
                         Total WetPacks: {rows.map(row => row.wet_pack).reduce((partialSum, a) => partialSum + (a === undefined ? 0 : Math.round(a * 100) / 100), 0)}
                     </Typography>
                     <BotonesAdminComponent
-                        items={items} workOrders={workOrders} onOpenSideBar={handleOpenSideBar} rol={rol}
-                        onWetPacksInfo={() => { setOpenWetPackDialog(true) }}
+                        items={items} workOrders={workOrders} onOpenSideBar={handleOpenSideBar} rol={rol} onWetPacksInfo={() => { setOpenWetPackDialog(true) }}
                         onExport={() => { handleOnExport(props.day) }}
                         onAdd={() => {
                             setNewCustomer("")
