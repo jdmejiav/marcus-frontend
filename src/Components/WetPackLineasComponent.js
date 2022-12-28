@@ -11,7 +11,16 @@ import { productivities } from "../util/Productivities";
 import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
 
-
+/**
+ * 
+ * @param {{
+ *  open boolean
+ *  onClose function
+ *  rows array
+ *  workOrders object
+ * }} props 
+ * @returns 
+ */
 export default function WetPackLineasComponent(props) {
     const { open, onClose, rows, workOrders } = props
     const [wetPacks, setSetWetPacks] = useState({})

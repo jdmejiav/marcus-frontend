@@ -28,8 +28,10 @@ import Autocomplete from "@mui/material/Select";
 const RecipesPage = () => {
     /**
      * @property {object} 0 - Recipes object dry, and wp keys
+     * @property {function} 1 - Set Method for recipes
      */
     const [recipes, setRecipes] = useState(undefined)
+    
     const [dialogAddRecipe, setDialogAddRecipe] = useState(false)
     const [dry, setDry] = useState(0)
     const [wet, setWet] = useState(0)

@@ -36,9 +36,7 @@ import RemoveRoundedIcon from '@mui/icons-material/RemoveRounded';
  */
 
 export default function DialogCrearRowComponent(props) {
-
     const { items, newProduct, newCustomer, customers, combo, open, onClose, onProductChange, onCustomerChange, onAddCombo, onProductChangeCombo, onDeleteCombo, onAddRecipe } = props
-
     return <Dialog onClose={onClose} maxWidth={false} open={open}>
         <DialogTitle>Añadir fila</DialogTitle>
         <DialogContent>

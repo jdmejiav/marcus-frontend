@@ -613,7 +613,12 @@ export default function PlaneacionPage(props) {
         },
     ]
     const refreshItems = async () => {
-        const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/refreshInventory`).then(res => res.data).catch(err => console.log(err))
+        console.log("Aló ")
+        const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/refreshInventory`).then(res => {
+
+            console.log(res.data)
+            return res.data
+        }).catch(err => console.log(err))
         setItems(info.items)
         setCustomers(info.customers)
     }
@@ -752,7 +757,7 @@ export default function PlaneacionPage(props) {
     return (
         <div style={{ overflowY: "hidden" }}>
             <>
-                <DialogBuscarProductoComponent open={dialogBuscar} onClose={() => { setDialogBuscar(false) }} product={tempItem} items={items} />
+
                 <DialogCrearRowComponent items={items} newProduct={newProduct} newCustomer={newCustomer} customers={customers} combo={combo} open={dialogAdd}
                     onCustomerChange={(e) => { setNewCustomer(e.target.value) }}
                     onClose={() => {
@@ -799,6 +804,8 @@ export default function PlaneacionPage(props) {
                         }
                     }}
                 />
+                
+                <DialogBuscarProductoComponent open={dialogBuscar} onClose={() => { setDialogBuscar(false) }} product={tempItem} items={items} />
                 <DialogRecipeComponent
                     dry={dry} wet={wet} open={dialogRecipe} onDryChange={(e) => setDry(e.target.value)} onWetChange={(e) => { setWet(e.target.value) }} newProduct={newProduct}
                     onClose={() => {
@@ -819,7 +826,7 @@ export default function PlaneacionPage(props) {
                     height: "95vh",
                     width: '100%',
                 }}>
-                    <SettingsDrawerComponent openSideBar={openSideBar} onClose={toggleDrawer("bottom", false)} onOpen={toggleDrawer("bottom", true)} rol={rol} onRefreshInventory={refreshItems} onNewday={handleOnNewDay}
+                    <SettingsDrawerComponent openSideBar={openSideBar} onClose={toggleDrawer("bottom", false)} onOpen={toggleDrawer("bottom", true)} rol={rol} onRefreshInventory={refreshItems} onNewDay={handleOnNewDay}
                         onRecipes={() => {
                             window.open('/recipes')
                         }}
@@ -827,7 +834,6 @@ export default function PlaneacionPage(props) {
                             localStorage.clear()
                             window.location.href = "/login"
                         }} />
-
                     <DataGridComponent
                         rows={rows}
                         columns={columns}
