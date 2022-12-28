@@ -18,8 +18,7 @@ import Paleta from "../util/Pallete";
 import AddIcon from '@mui/icons-material/Add'
 import Fab from '@mui/material/Fab';
 import DialogRecipeComponent from "../Components/DialogRecipeComponent";
-
-import Autocomplete from "@mui/material/Select";
+import Autocomplete from "@mui/material/Autocomplete";
 
 /**
  * Page to see and edit the wetpacks recipes
@@ -31,7 +30,7 @@ const RecipesPage = () => {
      * @property {function} 1 - Set Method for recipes
      */
     const [recipes, setRecipes] = useState(undefined)
-    
+
     const [dialogAddRecipe, setDialogAddRecipe] = useState(false)
     const [dry, setDry] = useState(0)
     const [wet, setWet] = useState(0)
@@ -58,10 +57,20 @@ const RecipesPage = () => {
     }
 
     return <Box sx={{ m: 4 }}>
-        <DialogRecipeComponent dry={dry} wet={wet} newProduct={newProduct} open={dialogAddRecipe} onWetChange={(e) => setWet(e.target.value)} onDryChange={(e) => setDry(e.target.value)} >
+        <DialogRecipeComponent
+            dry={dry} wet={wet} newProduct={newProduct} open={dialogAddRecipe} onClose={() => { setDialogAddRecipe(false) }} onWetChange={(e) => setWet(e.target.value)} onDryChange={(e) => setDry(e.target.value)}
+            onAddRecipe={async () => {
+                await axios.post(`${process.env.REACT_APP_REST_BACKEND_URL}/addRecipe`, { product: newProduct, wp: wet, dry: dry })
+                setDialogAddRecipe(false)
+                setWet(0)
+                setDry(0)
+                getRecipes()
+            }}
+        >
             <Grid container spacing={4}>
-                <Grid item xs={6}>
+                <Grid item xs={12}>
                     <Autocomplete
+                        sx={{ mb: 2 }}
                         id="product-autocomplete"
                         onChange={(_, value) => {
                             if (value !== null) {
@@ -71,7 +80,7 @@ const RecipesPage = () => {
                             }
                         }}
                         options={items !== undefined ?
-                            Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : {}}
+                            Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : []}
                         renderInput={(params) => <TextField fullWidth {...params} value={newProduct} label="Product" />} />
                 </Grid>
             </Grid>
@@ -152,15 +161,6 @@ const RecipesPage = () => {
                     marginRight: "1rem"
                 }} color="primary" aria-label="add">
                 <AddIcon />
-            </Fab>
-            <Fab
-                onClick={() => console.log(items !== undefined ?
-                    Object.keys(items).sort().map((product, index) => ({ "label": product, id: index })) : [])}
-                sx={{ backgroundColor: Paleta.azulOscuro }}
-                style={{
-                    marginRight: "1rem"
-                }} color="primary" aria-label="add">
-                aaaaa
             </Fab>
         </div>
     </Box >

@@ -86,7 +86,7 @@ export default function DialogCrearRowComponent(props) {
                                     id="product-autocomplete"
                                     onChange={(_, value) => { onProductChangeCombo(value, idx) }}
                                     options={items !== undefined ?
-                                        Object.keys(items).sort().map((product, idx) => ({ "label": product, id: idx })) : {}}
+                                        Object.keys(items).sort().map((product, idx) => ({ "label": product, id: idx })) : []}
 
                                     renderInput={(params) => <TextField fullWidth {...params} value={item} label="Product" />} />
                             </Grid>
