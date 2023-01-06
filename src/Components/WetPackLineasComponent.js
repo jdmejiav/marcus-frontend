@@ -32,7 +32,7 @@ export default function WetPackLineasComponent(props) {
         "línea 5": 0,
         "Vase L1": 0,
         "Vase L2": 0,
-        "Línea 10 (eComerce)": 0,
+        "Línea 10": 0,
     })
     const handleLineStatistics = () => {
         const tempLineProdcution = {
@@ -43,11 +43,10 @@ export default function WetPackLineasComponent(props) {
             "LINE 5": 0,
             "Vase L1": 0,
             "Vase L2": 0,
-            "LINE 10 (eComerce)": 0,
+            "LINE 10": 0,
         }
         rows.forEach(row => {
             if (row.wo !== "" && row.wo in workOrders) {
-                console.log(row.wo + "   " + workOrders[row.wo].task)
                 tempLineProdcution[row.line] = (tempLineProdcution[row.line] === undefined ? 0 : tempLineProdcution[row.line]) + (Number(workOrders[row.wo].boxes) / productivities[workOrders[row.wo].task])
             }
         })
@@ -61,35 +60,34 @@ export default function WetPackLineasComponent(props) {
                 tempWetpack[row.line] = tempWetpack[row.line] === undefined ? row.wet_pack : tempWetpack[row.line] + row.wet_pack
             }
         })
-        console.log(tempWetpack)
-        console.log(typeof open)
         setSetWetPacks(tempWetpack)
+
     }, [open])
     return <Dialog maxWidth={false} onClose={onClose} open={open}>
         <DialogTitle>
             # Wetpack Líneas
         </DialogTitle>
         <DialogContent>
-            <Stack sx={{
-                "&": {
-                    flexDirection: "row"
-                }
-            }}>
-                {Object.keys(wetPacks).sort().map(line => (<></>))}
-            </Stack>
-            <Divider sx={{ marginBottom: 3 }}></Divider>
+
             <Typography>Estimación horas:</Typography>
             <Stack sx={{
                 "&": {
                     flexDirection: "row"
                 }
             }}>
+
                 {
                     Object.keys(lineProduction).sort().map(key => {
                         return <ListItem item key={key} xs={6}>
+                            <Divider sx={{ mr: 2 }} orientation={"vertical"}></Divider>
                             <ListItemText>
-                                <b>{key}</b>: {Math.round(lineProduction[key]).toString().padStart(2, '0')}:{(Math.round((lineProduction[key] - Math.round(lineProduction[key])) * 60)).toString().padStart(2, '0')} H
+                                <b>{key}:</b>
+                                <br />
+                                {Math.round(lineProduction[key]).toString().padStart(2, '0')}:{(Math.round((lineProduction[key] - Math.round(lineProduction[key])) * 60)).toString().padStart(2, '0')} H
+                                <br />
+                                <b>Total WP:</b>{wetPacks[key]}
                             </ListItemText>
+                            <Divider sx={{ ml: 2 }} orientation={"vertical"}></Divider>
                         </ListItem>
                     })
                 }

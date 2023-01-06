@@ -4,12 +4,6 @@ import Paleta from "../util/Pallete"
  * sx Styles for the DataGrdid Component
  */
 export const styleDataGrid = {
-    /*
-    '& .MuiDataGrid-footerContainer': {
-        display: "none"
-    },
-    */
-
     '.MuiSvgIcon-root': {
         color: "#fff"
     },
@@ -18,7 +12,6 @@ export const styleDataGrid = {
         color: "#fff"
     },
     '& .prioridad1': {
-        //color: "#FF0000",
         backgroundColor: '#ffff00',
     },
     '& .prioridad1Cell': {
@@ -27,12 +20,10 @@ export const styleDataGrid = {
         color: "#FF0000"
     },
     '& .prioridad2Cell': {
-        //backgroundColor: "#FFCE97" ,
         fontWeight: 900,
         color: "#FF8000"
     },
     '& .prioridad3Cell': {
-        //backgroundColor: "#88FFA7" ,
         fontWeight: 900,
         color: "#00C244"
     },

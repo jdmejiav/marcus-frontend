@@ -196,7 +196,7 @@ export const Roles = {
     "Vase L2": line,
     "Vase L3": line,
     "Vase L4": line,
-    "LINE 10 (eComerce)": line,
+    "LINE 10": line,
     "LINE Dry": line,
 }
 
@@ -217,6 +217,6 @@ export const RolesLineas = {
     "Vase L2": line,
     "Vase L3": line,
     "Vase L4": line,
-    "LINE 10 (eComerce)": line,
+    "LINE 10": line,
     "LINE Dry": line,
 }

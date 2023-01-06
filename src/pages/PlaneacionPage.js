@@ -87,6 +87,7 @@ export default function PlaneacionPage(props) {
                 if (dataFromServer.type === "update") {
                     const rowsUpdated = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/${props.day}/getRows`).then(res => res.data)
                     setRows(rowsUpdated)
+                    getItems()
                 }
             }
         }
@@ -549,9 +550,9 @@ export default function PlaneacionPage(props) {
             hideable: Roles[rol].line.hideable,
             valueOptions: (params) => {
                 if (params.row !== undefined) {
-                    return params.row.turno === "Morning" ? ["LINE 1", "LINE 2", "LINE 3", "LINE 4", "LINE 5", "Vase L1", "Vase L2", "LINE 10 (eComerce)", "Line Dry"] : ["LINE 6", "LINE 7", "LINE 8", "LINE 9", "LINE 11", "Vase L3", "Vase L4", "Linea 10 (eComerce)", "Line Dry"]
+                    return params.row.turno === "Morning" ? ["LINE 1", "LINE 2", "LINE 3", "LINE 4", "LINE 5", "Vase L1", "Vase L2", "LINE 10", "Line Dry"] : ["LINE 6", "LINE 7", "LINE 8", "LINE 9", "LINE 11", "Vase L3", "Vase L4", "Linea 10", "Line Dry"]
                 }
-                return ["LINE 1", "LINE 2", "LINE 3", "LINE 4", "LINE 5", "LINE 6", "LINE 7", "LINE 8", "LINE 9", "LINE 11", "Vase L1", "Vase L2", "Vase L3", "Vase L4", "LINE 10 (eComerce)", "Line Dry"]
+                return ["LINE 1", "LINE 2", "LINE 3", "LINE 4", "LINE 5", "LINE 6", "LINE 7", "LINE 8", "LINE 9", "LINE 11", "Vase L1", "Vase L2", "Vase L3", "Vase L4", "LINE 10", "Line Dry"]
             },
         },
         {
@@ -613,17 +614,28 @@ export default function PlaneacionPage(props) {
         },
     ]
     const refreshItems = async () => {
-        console.log("Aló ")
         const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/refreshInventory`).then(res => {
-
-            console.log(res.data)
+            client.send(
+                JSON.stringify({
+                    day: props.daay,
+                    type: "update",
+                })
+            )
             return res.data
         }).catch(err => console.log(err))
         setItems(info.items)
         setCustomers(info.customers)
     }
     const getItems = async () => {
-        const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/fetchInventory`).then(res => res.data).catch(err => console.log(err))
+        const info = await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/fetchInventory`).then(res => res.data).catch(err => {
+            console.log(err)
+            client.send(
+                JSON.stringify({
+                    day: props.daay,
+                    type: "update",
+                })
+            )
+        })
         setItems(info.items)
         setCustomers(info.customers)
     }
@@ -745,14 +757,16 @@ export default function PlaneacionPage(props) {
     const handleOnNewDay = async () => {
         handleOnExport("sameday")
         await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/newDay`).then(async res => {
+            client.send(
+                JSON.stringify({
+                    day: props.day,
+                    type: "update",
+                })
+            )
             refreshItems()
+
         })
-        client.send(
-            JSON.stringify({
-                day: props.day,
-                type: "update",
-            })
-        )
+
     }
     return (
         <div style={{ overflowY: "hidden" }}>
@@ -804,7 +818,7 @@ export default function PlaneacionPage(props) {
                         }
                     }}
                 />
-                
+
                 <DialogBuscarProductoComponent open={dialogBuscar} onClose={() => { setDialogBuscar(false) }} product={tempItem} items={items} />
                 <DialogRecipeComponent
                     dry={dry} wet={wet} open={dialogRecipe} onDryChange={(e) => setDry(e.target.value)} onWetChange={(e) => { setWet(e.target.value) }} newProduct={newProduct}
@@ -826,14 +840,17 @@ export default function PlaneacionPage(props) {
                     height: "95vh",
                     width: '100%',
                 }}>
-                    <SettingsDrawerComponent openSideBar={openSideBar} onClose={toggleDrawer("bottom", false)} onOpen={toggleDrawer("bottom", true)} rol={rol} onRefreshInventory={refreshItems} onNewDay={handleOnNewDay}
-                        onRecipes={() => {
-                            window.open('/recipes')
-                        }}
-                        onLogout={() => {
-                            localStorage.clear()
-                            window.location.href = "/login"
-                        }} />
+                    {
+                        openSideBar ? <SettingsDrawerComponent
+                            openSideBar={openSideBar} onClose={toggleDrawer("bottom", false)} onOpen={toggleDrawer("bottom", true)} rol={rol} onRefreshInventory={refreshItems} onNewDay={handleOnNewDay}
+                            onRecipes={() => {
+                                window.open('/recipes')
+                            }}
+                            onLogout={() => {
+                                localStorage.clear()
+                                window.location.href = "/login"
+                            }} /> : undefined
+                    }
                     <DataGridComponent
                         rows={rows}
                         columns={columns}
