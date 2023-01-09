@@ -1,14 +1,9 @@
-import Paleta from "../util/Pallete"
 
 /**
  * sx Styles for the DataGrdid Component
  */
 export const styleDataGrid = {
     '.MuiSvgIcon-root': {
-        color: "#fff"
-    },
-    '.MuiDataGrid-columnHeadersInner': {
-        backgroundColor: Paleta.azulOscuro,
         color: "#fff"
     },
     '& .prioridad1': {

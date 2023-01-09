@@ -678,7 +678,7 @@ export default function PlaneacionPage(props) {
                 poDescription: {},
                 dry_boxes: {},
                 pull_date: "",
-                //wet_pack: 0,
+                wet_pack: 0,
                 comment: "",
                 priority: "",
                 wo: "",
@@ -687,8 +687,8 @@ export default function PlaneacionPage(props) {
                 turno: "Morning",
                 assigned: "",
                 made: "",
-                order_status: "",
-                scan_status: "",
+                order_status: "NO ARMADO",
+                scan_status: "NO ESCANEADO",
                 box_code: "",
                 hargoods: "",
                 hargoods_status: "Pendiente por entregar",
@@ -724,9 +724,15 @@ export default function PlaneacionPage(props) {
             })
             tempRetorno["dry_boxes"] = temp_dry
             delete tempRetorno["poDescription"]
+
             for (var j = 0; j < Object.keys(tempRetorno).length; j++) {
-                if (objectMaxLength[j] < tempRetorno[Object.keys(tempRetorno)[j]].length) {
-                    objectMaxLength[j] = tempRetorno[Object.keys(tempRetorno)[j]].length
+                console.log("tempRetorno ", j, " ", Object.keys(tempRetorno)[j])
+                try {
+                    if (objectMaxLength[j] < tempRetorno[Object.keys(tempRetorno)[j]].length) {
+                        objectMaxLength[j] = tempRetorno[Object.keys(tempRetorno)[j]].length
+                    }
+                } catch (e) {
+                    console.log(e)
                 }
             }
             return tempRetorno
@@ -852,6 +858,7 @@ export default function PlaneacionPage(props) {
                             }} /> : undefined
                     }
                     <DataGridComponent
+                        day={props.day}
                         rows={rows}
                         columns={columns}
                         items={items}
@@ -860,13 +867,14 @@ export default function PlaneacionPage(props) {
                         rol={rol}
                     >
                     </DataGridComponent>
-                    <Typography sx={{
-                        position: "Sticky",
-                        bottom: "3vh",
-                        marginLeft: "10px"
-
-                    }}>
-                        Total WetPacks: {rows.map(row => row.wet_pack).reduce((partialSum, a) => partialSum + (a === undefined ? 0 : Math.round(a * 100) / 100), 0)}
+                    <Typography
+                        fontSize={25}
+                        sx={{
+                            position: "Sticky",
+                            bottom: "1vh",
+                            marginLeft: "10px"
+                        }}>
+                        <b>Total WetPacks: {rows.map(row => row.wet_pack).reduce((partialSum, a) => partialSum + (a === undefined ? 0 : Math.round(a * 100) / 100), 0)}</b>
                     </Typography>
                     <BotonesAdminComponent
                         items={items} workOrders={workOrders} onOpenSideBar={handleOpenSideBar} rol={rol} onWetPacksInfo={() => { setOpenWetPackDialog(true) }}

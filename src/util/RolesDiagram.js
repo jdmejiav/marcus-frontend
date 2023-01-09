@@ -200,7 +200,7 @@ export const Roles = {
     "LINE Dry": line,
 }
 
-export const RolesBotones = { "admin": 1, "planeacion": 1, "receiving": 1 }
+export const RolesBotones = { "admin": 1, "planeacion": 1, "receiving": 1, "hardgoods": 1 }
 
 export const RolesLineas = {
     "LINE 1": line,

@@ -2,7 +2,7 @@ import React from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import { Roles, RolesLineas } from "../util/RolesDiagram";
 import { styleDataGrid } from "./DataGridStyles";
-
+import Paleta from "../util/Pallete";
 
 /**
  * 
@@ -13,11 +13,17 @@ import { styleDataGrid } from "./DataGridStyles";
  *  workOrders: object
  *  onRowchange: function
  *  rol: string
+ *  day: string
  * }} props Props for the component
  * @returns React.
  */
 export default function DataGridComponent(props) {
-    const { rows, columns, items, workOrders, onRowchange, rol } = props
+    const { rows, columns, items, workOrders, onRowchange, rol, day } = props
+
+    styleDataGrid['.MuiDataGrid-columnHeadersInner'] = {
+        backgroundColor: day === "nextday" ? Paleta.azulOscuro : Paleta.sameday,
+        color: "#fff"
+    }
     return <DataGrid
         aria-label="Marco"
         columnVisibilityModel={{
