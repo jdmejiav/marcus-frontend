@@ -26,7 +26,7 @@ import BotonesAdminComponent from "../Components/BotonesAdminComponent";
 import DialogCrearRowComponent from "../Components/DialogCrearRowComponent";
 import SettingsDrawerComponent from "../Components/SettingsDrawerComponent";
 import DialogBuscarProductoComponent from "../Components/DialogBuscarProductoComponent";
-
+import DialogConfirmNewDay from "../Components/DialogConfirmNewDay";
 const client = new W3CWebSocket(process.env.REACT_APP_SOCKET_SERVER_URL)
 
 export default function PlaneacionPage(props) {
@@ -34,6 +34,7 @@ export default function PlaneacionPage(props) {
     const [customers, setCustomers] = useState([])
     const [dialogAdd, setDialogAdd] = useState(false)
     const [dialogBuscar, setDialogBuscar] = useState(false)
+    const [dialogConfirmNewDay, setDialogConfirmNewDay] = useState(false)
     const [day, setDay] = useState(props.day)
     const [rol, setRol] = useState("default")
     const [recipes, setRecipes] = useState(undefined)
@@ -190,7 +191,7 @@ export default function PlaneacionPage(props) {
             width: 100, field: "date", headerName: "Date", type: 'date', sortable: true,
             editable: Roles[rol].date.edit,
             hideable: Roles[rol].date.hideable,
-            valueFormatter: params => moment(params.value).format("DD/MM/YYYY")
+            valueFormatter: params => moment(params.value).format("L")
         },
         {
             width: 110, field: "customer", headerName: "Customer", sortable: true,
@@ -264,6 +265,7 @@ export default function PlaneacionPage(props) {
                     Object.keys(rowPayload.poDescription).forEach((item) => {
                         tempComment = tempComment + item.split(" ")[0] + " " + rowPayload.poDescription[item] + item.charAt(item.length - 1) + "  "
                     })
+
                     const tempCommentSplit = rowPayload.comment.split("|")
 
                     if (tempCommentSplit.length > 1) {
@@ -476,11 +478,12 @@ export default function PlaneacionPage(props) {
                     params.row.product.split(", ").forEach(productName => {
                         Object.keys(params.row.poDescription).forEach((key) => {
                             let tempPo = key.split(" ")[0] + key.charAt(key.length - 1)
-
-                            if (items[productName][tempPo] !== undefined) {
-                                let pack = items[productName][tempPo].pack
-                                let packWet = recipes[productName].wp
-                                tempDry = tempDry + (Math.round(((pack * params.row.poDescription[key]) / packWet) * 100) / 100)
+                            if (items[productName] !== undefined) {
+                                if (items[productName][tempPo] !== undefined) {
+                                    let pack = items[productName][tempPo].pack
+                                    let packWet = recipes[productName].wp
+                                    tempDry = tempDry + (Math.round(((pack * params.row.poDescription[key]) / packWet) * 100) / 100)
+                                }
                             }
                         })
                     })
@@ -504,6 +507,17 @@ export default function PlaneacionPage(props) {
             width: 250, field: "comment", headerName: "Comment",
             editable: Roles[rol].comment.edit,
             hideable: Roles[rol].comment.hideable,
+            renderCell: (params) => <>
+                <Typography>
+                    {params.value}
+
+
+                </Typography>
+                <br />
+                {"//"}
+                <br />
+                {Object.keys(params.row.dry_boxes).map((key) => (<><Typography key={key}>{params.row.dry_boxes[key]}{key}</Typography> <br /></>))}
+            </>
         },
         {
             width: 110, field: "pull_date", headerName: "Pull Date",
@@ -567,7 +581,7 @@ export default function PlaneacionPage(props) {
             hideable: Roles[rol].exit_order.hideable,
         },
         {
-            width: 110, field: "receiving_comment", headerName: "Comentario Receiving",
+            width: rol === 'receiving' ? 200 : 110, field: "receiving_comment", headerName: "Comentario Receiving",
             editable: Roles[rol].receiving_comment.edit,
             hideable: Roles[rol].receiving_comment.hideable,
         },
@@ -715,9 +729,13 @@ export default function PlaneacionPage(props) {
             for (var i = 0; i < item.po.length; i++) {
                 tempPo = tempPo + item.po[i].split(" ")[0] + " " + item.poDescription[Object.keys(item.poDescription)[i]] + item.po[i].charAt(item.po[i].length - 1) + "    "
             }
+            //delete tempRetorno["comment"]
+            delete tempRetorno["_v"]
+            delete tempRetorno["id"]
+            tempRetorno["date"] = moment(tempRetorno["date"]).format("L")
             delete tempRetorno["_id"]
             delete tempRetorno["actions"]
-            tempRetorno["po"] = tempPo
+            //tempRetorno["po"] = tempPo
             let temp_dry = ""
             Object.keys(item.dry_boxes).forEach((key) => {
                 temp_dry = temp_dry + item.dry_boxes[key] + key + " "
@@ -765,19 +783,26 @@ export default function PlaneacionPage(props) {
         await axios.get(`${process.env.REACT_APP_REST_BACKEND_URL}/newDay`).then(async res => {
             client.send(
                 JSON.stringify({
-                    day: props.day,
+                    day: "sameday",
+                    type: "update",
+                })
+            )
+            client.send(
+                JSON.stringify({
+                    day: "nextday",
                     type: "update",
                 })
             )
             refreshItems()
-
         })
-
     }
     return (
         <div style={{ overflowY: "hidden" }}>
             <>
-
+                <DialogConfirmNewDay open={dialogConfirmNewDay} onClose={() => { setDialogConfirmNewDay(false) }} handleOnNewDay={() => {
+                    setDialogConfirmNewDay(false);
+                    handleOnNewDay()
+                }} />
                 <DialogCrearRowComponent items={items} newProduct={newProduct} newCustomer={newCustomer} customers={customers} combo={combo} open={dialogAdd}
                     onCustomerChange={(e) => { setNewCustomer(e.target.value) }}
                     onClose={() => {
@@ -848,7 +873,7 @@ export default function PlaneacionPage(props) {
                 }}>
                     {
                         openSideBar ? <SettingsDrawerComponent
-                            openSideBar={openSideBar} onClose={toggleDrawer("bottom", false)} onOpen={toggleDrawer("bottom", true)} rol={rol} onRefreshInventory={refreshItems} onNewDay={handleOnNewDay}
+                            openSideBar={openSideBar} onClose={toggleDrawer("bottom", false)} onOpen={toggleDrawer("bottom", true)} rol={rol} onRefreshInventory={refreshItems} onNewDay={() => { setDialogConfirmNewDay(true) }}
                             onRecipes={() => {
                                 window.open('/recipes')
                             }}
