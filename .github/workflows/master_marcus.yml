@@ -22,11 +22,13 @@ jobs:
           node-version: '16.x'
 
       - name: npm install, build, and test
-        env: |
-          NODE_ENV:${{ secrets.NODE_ENV }}
-          REACT_APP_SOCKET_SERVER_URL:${{ secrets.REACT_APP_SOCKET_SERVER_URL }}
-          REACT_APP_REST_BACKEND_URL:${{ secrets.REACT_APP_REST_BACKEND_URL }}
+
+        env:
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+          REACT_APP_SOCKET_SERVER_URL: ${{ secrets.REACT_APP_SOCKET_SERVER_URL }}
+          REACT_APP_REST_BACKEND_URL: ${{ secrets.REACT_APP_REST_BACKEND_URL }}
           PORT: ${{ secrets.PORT }}
+          
         run: |
           npm install
           npm run build --if-present
